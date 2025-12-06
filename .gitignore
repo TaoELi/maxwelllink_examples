@@ -1,0 +1,10 @@
+main.o*
+main.e*
+driver*.o*
+driver*.e*
+tcp_host_port_info.txt
+timer.dat
+psi4*.dat
+psi*.clean
+*.log
+log.lammps
