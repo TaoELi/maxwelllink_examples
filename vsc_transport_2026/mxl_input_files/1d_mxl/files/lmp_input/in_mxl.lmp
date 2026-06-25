@@ -1,0 +1,36 @@
+units		electron
+atom_style	full
+
+pair_style lj/cut/coul/long 18.000
+#bond_style      harmonic
+bond_style      class2 
+angle_style     harmonic
+kspace_style	pppm 0.0001
+
+read_data	data.lmp
+
+pair_coeff  1  1  0.000089126 5.29123
+pair_coeff  1  2  0.000150620 5.50666
+pair_coeff  2  2  0.000254542 5.72209
+
+neighbor	2.0 bin
+
+timestep	0.5
+
+thermo          1000
+velocity all create 300.0 2345187
+fix             pre_nvt all nvt temp 300.0 300.0 100.0
+run             20000
+unfix           pre_nvt
+
+reset_timestep  0
+fix 1 all mxl HOST PORT unix reset_dipole
+fix 2 all nve
+#fix 2 all nvt temp 300.0 300.0 100.0
+
+compute         bond_sum all pe bond
+fix             print_bond all ave/time 4 1 4 c_bond_sum file coenergy_box_BOX_ID.xyz
+#dump		BOX_ID all xyz 4 traj_box_BOX_ID.xyz
+
+run		100000000
+
