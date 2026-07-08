@@ -51,35 +51,78 @@ def smooth(x,window_len=11,window='hamming'):
     y=np.convolve(w/w.sum(),s,mode='valid')
     return y[window_len//2-1:-window_len//2]
 
-def plot_2d_efield():
+def plot_2d_background():
 
-    fig, axes = clp.initialize(2, 4, width=4*4.3, height=4.3*2*0.86, LaTeX=True, fontsize=12, return_fig_args=True)
-    data_list = ["./data/mxl_144*144/2d_144_144_efield_neq_0.002.npy", "./data/mxl_144*144/2d_144_144_efield_neq_0.005.npy"]
+    fig, axes = clp.initialize(5, 3, width=3*4.3, height=4.3*5*0.86, LaTeX=True, fontsize=12, return_fig_args=True)
+    efield_data_list = ["./data/mxl_144*144/2d_144_144_efield_neq_0.002.npy", "./data/mxl_144*144/2d_144_144_efield_neq_0.005.npy"]
+    coenergy_data_list = ["./data/mxl_144*144/coenergy_36_0.002.npy", "./data/mxl_144*144/coenergy_36_0.005.npy"]
     time_list = [50, 150, 300]
     time_labels = [r"$t=%.1f$ ps" % (t/50) for t in time_list]
-    label_list = {0 : ["(b)","(c)","(d)"], 1: ["(e)","(f)", "(g)"]}
+    label_list = {
+        1: ["(c)","(d)","(e)"],
+        2: ["(f)","(g)","(h)"],
+        3: ["(i)","(j)","(k)"],
+        4: ["(l)","(m)","(n)"],
+    }
     amp_list = [r"$E_0=2\times10^{-3}$ a.u.", r"$E_0=5\times10^{-3}$ a.u."]
+    row_specs = [
+        ("efield", 0, "E-field intensity [a.u.]"),
+        ("coenergy", 0, r"$E_{\rm C=O}$ per molecule [$10^2$ cm$^{-1}$]"),
+        ("efield", 1, "E-field intensity [a.u.]"),
+        ("coenergy", 1, r"$E_{\rm C=O}$ per molecule [$10^2$ cm$^{-1}$]"),
+    ]
 
-    for x0 in range(2):
-        data = np.load(data_list[x0])
-        ref_sp = (np.abs(data[time_list[0], :]).reshape(144, 144))**2
-        vmax = np.max(np.max(ref_sp))
-        vmin = vmax * 0.005
-        for y0 in range(1,4):
-            sp = (np.abs(data[time_list[y0-1], :]).reshape(144, 144))**2
+    axes[0, 0].axis("off")
+    axes[0, 2].axis("off")
+
+    data_cache = {}
+    scale_cache = {}
+    for kind, amp_index, _ in row_specs:
+        key = (kind, amp_index)
+        if key in data_cache:
+            continue
+        if kind == "efield":
+            data = np.load(efield_data_list[amp_index])
+            ref_sp = (np.abs(data[time_list[0], :]).reshape(144, 144))**2
+            vmax = np.max(np.max(ref_sp))
+            vmin = vmax * 0.005
+        else:
+            data = np.load(coenergy_data_list[amp_index]) * (219474.63 / 36) * 0.01
+            vmin = np.percentile(data[time_list[0]], 95)
+            vmax = np.percentile(data[time_list[0]], 99)
+        data_cache[key] = data
+        scale_cache[key] = (vmin, vmax)
+
+    for row, (kind, amp_index, cbar_label) in enumerate(row_specs, start=1):
+        data = data_cache[(kind, amp_index)]
+        vmin, vmax = scale_cache[(kind, amp_index)]
+        last_pos = None
+        for col, time_index in enumerate(time_list):
+            if kind == "efield":
+                sp = (np.abs(data[time_index, :]).reshape(144, 144))**2
+            else:
+                sp = data[time_index]
             extent = [0 , 144, 0, 144]
-            pos = axes[x0, y0].imshow(sp, aspect='equal', extent=extent, origin="lower",
+            pos = axes[row, col].imshow(sp, aspect='equal', extent=extent, origin="lower",
                     cmap=cm.hot, interpolation='nearest',
                     norm=LogNorm(vmin=vmin, vmax=vmax))
-            axes[x0, y0].set_box_aspect(1)
-            clp.plotone([], [], axes[x0, y0], colors=["c-","c-"], ylabel=r"$L_y$ \ position \ [$\mu\rm{m}$]" if y0==1 else None, xlabel=r"$L_x$ \ position \ [$\mu\rm{m}$]" if x0==1 else None, showlegend=False)
-            axes[x0, y0].set_yticks([0,72, 144])
-            axes[x0, y0].set_yticklabels([r"$0$", r"$200$", r"$400$"])
-            axes[x0, y0].set_xticks([0,72, 144])
-            axes[x0, y0].set_xticklabels([r"$0$", r"$200$", r"$400$"])
-            axes[x0, y0].text(0.98, 0.18, time_labels[y0-1], transform=axes[x0, y0].transAxes, fontsize=12, fontweight='bold', va='top', ha='right', color="w")
-            axes[x0, y0].text(0.08, 0.98, label_list[x0][y0-1], transform=axes[x0, y0].transAxes, fontsize=12, fontweight='bold', va='top', ha='right', color="w")
-            axes[x0, y0].text(0.98, 0.08, amp_list[x0], transform=axes[x0, y0].transAxes, fontsize=12, fontweight='bold', va='top', ha='right', color="w")
+            last_pos = pos
+            axes[row, col].set_box_aspect(1)
+            clp.plotone([], [], axes[row, col], colors=["c-","c-"], ylabel=r"$L_y$ \ position \ [$\mu\rm{m}$]" if col==0 else None, xlabel=r"$L_x$ \ position \ [$\mu\rm{m}$]" if row==4 else None, showlegend=False)
+            axes[row, col].set_yticks([0,72, 144])
+            axes[row, col].set_yticklabels([r"$0$", r"$200$", r"$400$"])
+            axes[row, col].set_xticks([0,72, 144])
+            axes[row, col].set_xticklabels([r"$0$", r"$200$", r"$400$"])
+            if col != 0:
+                axes[row, col].set_yticklabels([])
+            if row != 4:
+                axes[row, col].set_xticklabels([])
+            axes[row, col].text(0.98, 0.18, time_labels[col], transform=axes[row, col].transAxes, fontsize=12, fontweight='bold', va='top', ha='right', color="w")
+            axes[row, col].text(0.02, 0.98, label_list[row][col], transform=axes[row, col].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="w")
+            axes[row, col].text(0.98, 0.08, amp_list[amp_index], transform=axes[row, col].transAxes, fontsize=12, fontweight='bold', va='top', ha='right', color="w")
+            if col == 0:
+                axes[row, col].text(0.55, 0.95, r"$k_{\parallel} \ =$"+rf"$ \ 450 \ $"+r"$\rm{cm}^{-1}$", transform=axes[row, col].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="w")
+                axes[row, col].text(0.55, 0.85, r"$W_{\rm ph}=$"+rf"$ \ 0.61 \ $", transform=axes[row, col].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="w")
 
             marker_center = (85, 72)
             marker_width = 20
@@ -95,16 +138,19 @@ def plot_2d_efield():
                 linewidth=marker_linewidth,
                 zorder=3,
             )
-            axes[x0, y0].add_patch(center_marker)
-            if y0 == 3:
-                cbar_ax = axes[x0, y0].inset_axes([1.04, 0.0, 0.055, 1.0])
-                cbar = fig.colorbar(pos, cax=cbar_ax)
-                cbar.ax.tick_params(labelsize=12)
-                cbar.set_label("E-field intensity [a.u.]", fontsize=12)
-
-    for j in range(2):
-        axes[j, 1].text(0.6, 0.95, r"$k_{\parallel} \ =$"+rf"$ \ 450 \ $"+r"$\rm{cm}^{-1}$", transform=axes[j, 1].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="w")
-        axes[j, 1].text(0.6, 0.85, r"$W_{\rm ph}=$"+rf"$ \ 0.61 \ $", transform=axes[j, 1].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="w")
+            axes[row, col].add_patch(center_marker)
+        cbar_ax = axes[row, 2].inset_axes([1.04, 0.0, 0.055, 1.0])
+        cbar = fig.colorbar(last_pos, cax=cbar_ax)
+        cbar.ax.tick_params(labelsize=12)
+        cbar.set_label(cbar_label, fontsize=12)
+        if kind == "coenergy":
+            if amp_index == 0:
+                cbar.set_ticks([3, 4])
+                cbar.set_ticklabels([r"$3$", r"$4$"])
+            else:
+                cbar.set_ticks([4,5,6,7])
+                cbar.set_ticklabels([r"$4$", r"$5$", r"$6$", r"$7$"])
+        cbar.ax.yaxis.set_label_coords(4.2, 0.5)
 
     with h5py.File(f"./data/mxl_144*144/multimode_cavmd_144_eq.h5", "r") as f:
         data = {key: f[key][:] for key in f.keys()}
@@ -122,74 +168,112 @@ def plot_2d_efield():
 
     vmax = np.max(np.max(sp))
     vmin = vmax * 0.001
-    pos = axes[1,0].imshow(sp, aspect='auto', extent=extent,
+    pos = axes[0,1].imshow(sp, aspect='auto', extent=extent,
             cmap=cm.inferno,
             interpolation='nearest',
             norm=LogNorm(vmin=vmin, vmax=vmax)
             )
-    cbar_ax = axes[1,0].inset_axes([1.04, 0.0, 0.055, 1.0])
-    cbar = fig.colorbar(pos, cax=cbar_ax)
-    cbar.ax.tick_params(labelsize=12)
-    cbar.set_label("spectral intensity [arb. units]", fontsize=12)
-
     freq_cav_inplane = np.linspace(freq_cav_inplane_min, freq_cav_inplane_max, x.size)
 
     xs = [freq_cav_inplane]*2
     ys = [np.ones(len(freq_cav_inplane)) * 2327, (2320.0**2 + freq_cav_inplane**2)**0.5]
-    clp.plotone(xs, ys, axes[1,0], showlegend=False, colors=["orange", "c"], linestyles=["--", "--"], lw=1.2, xlim=[12.5,1800],
+    clp.plotone(xs, ys, axes[0,1], showlegend=False, colors=["orange", "c"], linestyles=["--", "--"], lw=1.2, xlim=[12.5,1800],
             xlabel=r"$\omega_{\parallel}$ [$\rm{cm}^{-1}$]",
             ylabel=r"IR frequency [$\rm{cm}^{-1}$]")
-    axes[1,0].text(1190, 2550, "cavity photon", color='c', fontsize=12)
-    axes[1,0].text(940, 2370, "C=O asym. stretch", color='orange', fontsize=12)
-    axes[1,0].tick_params(color='c', labelsize='medium', width=2)
+    axes[0,1].text(1190, 2550, "cavity photon", color='c', fontsize=12)
+    axes[0,1].text(940, 2370, "C=O asym. stretch", color='orange', fontsize=12)
+    axes[0,1].tick_params(color='c', labelsize='medium', width=2)
 
-    axes[1,0].set_xticks([12.5,600,1200,1800])
-    axes[1,0].set_yticks([2200,2400,2600,2800])
-    axes[1,0].annotate('', xy=(450, 2450), xytext=(450, 2550), arrowprops=dict(facecolor='w', edgecolor='w', arrowstyle='->', alpha=0.8, lw=2), fontsize=20)
-    axes[1,0].text(0.38, 0.5, "UP excitation", transform=axes[1,0].transAxes, fontsize=12, fontweight='bold', va='top', ha='right', color="w")
-
-    axes[0,0].axis("off")
+    axes[0,1].set_xticks([12.5,600,1200,1800])
+    axes[0,1].set_yticks([2200,2400,2600,2800])
+    axes[0,1].text(0.02, 0.98, "(b)", transform=axes[0,1].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="w")
+    axes[0,1].annotate('', xy=(450, 2450), xytext=(450, 2550), arrowprops=dict(facecolor='w', edgecolor='w', arrowstyle='->', alpha=0.8, lw=2), fontsize=20)
+    axes[0,1].text(0.38, 0.5, "UP excitation", transform=axes[0,1].transAxes, fontsize=12, fontweight='bold', va='top', ha='right', color="w")
 
     plt.rcParams["axes.axisbelow"] = False
-    fig.subplots_adjust(left=0.06, right=0.94, bottom=0.10, top=0.94, wspace=0.18, hspace=0.20)
+    fig.subplots_adjust(left=0.10, right=0.90, bottom=0.06, top=0.97, wspace=0.032, hspace=0.112)
     fig_width, fig_height = fig.get_size_inches()
-    image_group_shift = 0.055
-    image_col_gap = 0.027
-    for row in range(2):
-        base_pos = axes[row, 1].get_position()
-        square_width = base_pos.height * fig_height / fig_width
-        for col in range(1, 4):
+    first_row_pos = axes[0, 1].get_position()
+    reference_pos = axes[1, 0].get_position()
+    cbar_reference_pos = axes[1, 2].get_position()
+    first_second_gap_boost = reference_pos.height * 0.04
+    for row in range(1, 5):
+        for col in range(3):
+            pos_to_shift = axes[row, col].get_position()
             axes[row, col].set_position([
-                base_pos.x0 + image_group_shift + (col - 1) * (square_width + image_col_gap),
-                base_pos.y0,
-                square_width,
-                base_pos.height,
+                pos_to_shift.x0,
+                pos_to_shift.y0 - first_second_gap_boost,
+                pos_to_shift.width,
+                pos_to_shift.height,
             ])
-    clp.adjust(savefile=f"./figures/fig1_2d_efield.png")
+    cbar_gap = cbar_reference_pos.width * 0.04
+    cbar_width = cbar_reference_pos.width * 0.055
+    dispersion_height = reference_pos.height
+    scaled_square_width = dispersion_height * fig_height / fig_width
+    dispersion_width = dispersion_height * fig_height / fig_width / (0.618 * 1.1)
+    inset_width = scaled_square_width * 2400 / (2400 - 397)
+    first_row_image_gap = scaled_square_width * 0.24
+    first_row_left = axes[1, 0].get_position().x0
+    first_row_right = axes[1, 2].get_position().x1 + cbar_gap + cbar_width
+    first_row_group_width = inset_width + first_row_image_gap + dispersion_width + cbar_gap + cbar_width
+    first_row_group_left = first_row_left + (first_row_right - first_row_left - first_row_group_width) / 2
+    b_left = first_row_group_left + inset_width + first_row_image_gap
+    axes[0, 1].set_position([
+        b_left,
+        first_row_pos.y0 + (first_row_pos.height - dispersion_height) / 2 + first_second_gap_boost * 0.5,
+        dispersion_width,
+        dispersion_height,
+    ])
+    b_pos = axes[0, 1].get_position()
+    cbar_left = b_pos.x1 + cbar_gap
+    cbar_ax = fig.add_axes([
+        cbar_left,
+        b_pos.y0,
+        cbar_width,
+        b_pos.height,
+    ])
+    cbar = fig.colorbar(pos, cax=cbar_ax)
+    cbar.ax.tick_params(labelsize=12)
+    cbar.set_label("spectral intensity [arb. units]", fontsize=12)
+    clp.adjust(savefile=f"./figures/fig1_2d_efield_coenergy_background.png")
 
-def plot_2d_efield_final():
+def plot_2d_final():
 
-    plot_2d_efield()
+    plot_2d_background()
     from pathlib import Path
     from PIL import Image
 
-    base_file = Path("./figures/fig1_2d_efield.png")
+    base_file = Path("./figures/fig1_2d_efield_coenergy_background.png")
     inset_file = Path("./figures/fig1a.png")
-    output_file = Path("./figures/fig1_2d_efield_final.png")
-    paste_left = 190
-    paste_top = 35
-    paste_right = 1294
-    paste_height = 860
-    label_pos = (paste_right - 25, paste_top + 32)
+    output_file = Path("./figures/fig1_2d_final.png")
 
     base = Image.open(base_file).convert("RGBA")
     inset = Image.open(inset_file).convert("RGBA")
+    base_rgb = np.asarray(base.convert("RGB"))
+    height, width = base_rgb.shape[:2]
 
-    width = paste_right - paste_left
+    b_x0 = int(width * 0.35)
+    b_x1 = int(width * 0.90)
+    b_y1 = int(height * 0.20)
+    b_region = base_rgb[:b_y1, b_x0:b_x1]
+    b_dark = b_region.mean(axis=2) < 22
+    b_rows = np.where(b_dark.sum(axis=1) > b_dark.shape[1] * 0.35)[0]
+    if b_rows.size == 0:
+        raise RuntimeError("Could not locate panel (b) height in the background image.")
+    paste_top = int(b_rows[0])
+    paste_height = int(b_rows[-1] - b_rows[0] + 1)
+
+    b_cols = np.where(b_dark.sum(axis=0) > b_dark.shape[0] * 0.65)[0]
+    if b_cols.size == 0:
+        raise RuntimeError("Could not locate panel (b) left edge in the background image.")
+    b_left = int(b_x0 + b_cols[0])
+
     resampling = getattr(Image, "Resampling", Image).LANCZOS
-    inset = inset.resize((width, width), resampling)
-    top_crop = 185
-    inset = inset.crop((0, top_crop, width, top_crop + paste_height))
+    top_crop = 397
+    inset = inset.crop((0, top_crop, inset.width, inset.height))
+    paste_width = int(round(inset.width * paste_height / inset.height))
+    inset = inset.resize((paste_width, paste_height), resampling)
+    paste_left = int(round(b_left - paste_height * 0.24 - paste_width))
 
     final = base.copy()
     final.alpha_composite(inset, dest=(paste_left, paste_top))
@@ -200,7 +284,8 @@ def plot_2d_efield_final():
     ax = fig.add_axes([0, 0, 1, 1])
     ax.imshow(final)
     ax.axis("off")
-    fig.text(label_pos[0] / base.width, 1 - label_pos[1] / base.height, "(a)", fontsize=12, fontweight=500, color="w", ha="right", va="top")
+    fig.text((paste_left + paste_width * 0.98) / base.width, 1 - (paste_top + paste_height * 0.02) / base.height,
+             "(a)", fontsize=12, fontweight='bold', color="w", ha="right", va="top")
     fig.savefig(output_file, dpi=dpi, pad_inches=0)
     plt.close(fig)
     print(f"Saved final figure to {output_file}")
@@ -850,83 +935,6 @@ def plot_coenergy_animation():
     plt.close(fig)
     print(f"Saved animation to {output_file}")
 
-def plot_2d_coenergy():
-
-    fig, axes = clp.initialize(2, 3, width=3*4.3, height=4.3*2*0.86, LaTeX=True, fontsize=12, return_fig_args=True)
-    data_list = ["./data/mxl_144*144/coenergy_36_0.002.npy", "./data/mxl_144*144/coenergy_36_0.005.npy"]
-    time_list = [50, 150, 300]
-    time_labels = [r"$t=%.1f$ ps" % (t/50) for t in time_list]
-    label_list = {0 : ["(a)","(b)","(c)"], 1: ["(d)","(e)","(f)"]}
-    amp_list = [r"$E_0=2\times10^{-3}$ a.u.", r"$E_0=5\times10^{-3}$ a.u."]
-
-    for x0 in range(2):
-        sp = np.load(data_list[x0]) * (219474.63 / 36) * 0.01
-        vmin = np.percentile(sp[time_list[0]], 80)
-        vmax = np.percentile(sp[time_list[0]], 99)
-        for y0 in range(3):
-            extent = [0 , 144, 0, 144]
-            pos = axes[x0, y0].imshow(sp[time_list[y0]],
-                     aspect='equal', extent=extent, origin="lower",
-                    cmap=cm.hot, interpolation='nearest',
-                    norm=LogNorm(vmin=vmin, vmax=vmax))
-            axes[x0, y0].set_box_aspect(1)
-            clp.plotone([], [], axes[x0, y0], colors=["c-","c-"], ylabel=r"$L_y$ \ position \ [$\mu\rm{m}$]" if y0==0 else None, xlabel=r"$L_x$ \ position \ [$\mu\rm{m}$]" if x0==1 else None, showlegend=False)
-            axes[x0, y0].set_yticks([0,72, 144])
-            axes[x0, y0].set_yticklabels([r"$0$", r"$200$", r"$400$"])
-            axes[x0, y0].set_xticks([0,72, 144])
-            axes[x0, y0].set_xticklabels([r"$0$", r"$200$", r"$400$"])
-            axes[x0, y0].text(0.98, 0.18, time_labels[y0], transform=axes[x0, y0].transAxes, fontsize=12, fontweight='bold', va='top', ha='right', color="w")
-            axes[x0, y0].text(0.08, 0.98, label_list[x0][y0], transform=axes[x0, y0].transAxes, fontsize=12, fontweight='bold', va='top', ha='right', color="w")
-            axes[x0, y0].text(0.98, 0.08, amp_list[x0], transform=axes[x0, y0].transAxes, fontsize=12, fontweight='bold', va='top', ha='right', color="w")
-
-            marker_center = (85, 72)
-            marker_width = 20
-            marker_height = 24
-            marker_linewidth = 1.5
-            center_x, center_y = marker_center
-            center_marker = Rectangle(
-                (center_x - marker_width / 2, center_y - marker_height / 2),
-                marker_width,
-                marker_height,
-                fill=False,
-                edgecolor="cyan",
-                linewidth=marker_linewidth,
-                zorder=3,
-            )
-            axes[x0, y0].add_patch(center_marker)
-            if y0 == 2:
-                cbar_ax = axes[x0, y0].inset_axes([1.04, 0.0, 0.055, 1.0])
-                cbar = fig.colorbar(pos, cax=cbar_ax)
-                cbar.ax.tick_params(labelsize=12)
-                cbar.set_label(r"$E_{\mathrm{C=O}}$ per molecule [$10^2$ cm$^{-1}$]", fontsize=12)
-                if x0 == 0:
-                    cbar.set_ticks([3, 4])
-                    cbar.set_ticklabels([r"$3$", r"$4$"])
-                else:
-                    cbar.set_ticks([3,4,5,6,7])
-                    cbar.set_ticklabels([r"$3$", r"$4$", r"$5$", r"$6$", r"$7$"])
-
-    for j in range(2):
-        axes[j, 0].text(0.6, 0.95, r"$k_{\parallel} \ =$"+rf"$ \ 450 \ $"+r"$\rm{cm}^{-1}$", transform=axes[j, 0].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="w")
-        axes[j, 0].text(0.6, 0.85, r"$W_{\rm ph}=$"+rf"$ \ 0.61 \ $", transform=axes[j, 0].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="w")
-
-    plt.rcParams["axes.axisbelow"] = False
-    fig.subplots_adjust(left=0.06, right=0.94, bottom=0.10, top=0.94, wspace=0.18, hspace=0.20)
-    fig_width, fig_height = fig.get_size_inches()
-    image_group_shift = 0.055
-    image_col_gap = 0.027
-    for row in range(2):
-        base_pos = axes[row, 1].get_position()
-        square_width = base_pos.height * fig_height / fig_width
-        for col in range(3):
-            axes[row, col].set_position([
-                base_pos.x0 + image_group_shift + (col - 1) * (square_width + image_col_gap),
-                base_pos.y0,
-                square_width,
-                base_pos.height,
-            ])
-    clp.adjust(savefile=f"./figures/figS1_2d_coenergy.png")
-
 def plot_vg():
     fig, axes = clp.initialize(1, 2, width=4.3*2, height=4.3*0.618*1.1, LaTeX=True, fontsize=12, return_fig_args=True)
     with h5py.File(f"./data/mxl_144*144/multimode_cavmd_144_eq.h5", "r") as f:
@@ -991,7 +999,7 @@ def plot_vg():
     axes[1].text(0.08, 0.97, "(b)", transform=axes[1].transAxes, fontsize=12, fontweight='bold', va='top', ha='right', color="k")
     axes[1].set_xticks([12.5,600,1200,1800])
     plt.tight_layout()
-    clp.adjust(savefile=f"./figures/figS2_vg.png")
+    clp.adjust(savefile=f"./figures/figS1_vg.png")
 
 def plot_1d_efield_else():
 
@@ -1074,7 +1082,7 @@ def plot_1d_efield_else():
                 cbar.set_label("E-field intensity [a.u.]", fontsize=12)
     plt.rcParams["axes.axisbelow"] = False
     plt.tight_layout()
-    clp.adjust(savefile=f"./figures/figS3_1d_efield_else.png")
+    clp.adjust(savefile=f"./figures/figS2_1d_efield_else.png")
 
 def plot_1d_efield_ndependence():
 
@@ -1131,7 +1139,7 @@ def plot_1d_efield_ndependence():
             cbar.set_label("E-field intensity [a.u.]", fontsize=12)
     plt.rcParams["axes.axisbelow"] = False
     plt.tight_layout()
-    clp.adjust(savefile=f"./figures/figS4_1d_efield_numberdependence.png")
+    clp.adjust(savefile=f"./figures/figS3_1d_efield_numberdependence.png")
 
 def plot_addition_mmsd():
 
@@ -1174,16 +1182,15 @@ def plot_addition_mmsd():
 
     plt.rcParams["axes.axisbelow"] = False
     plt.tight_layout()
-    clp.adjust(savefile=f"./figures/figS5_addition_mmsd.png")
+    clp.adjust(savefile=f"./figures/figS4_addition_coenergy.png")
 
 if __name__ == "__main__":
-    plot_2d_efield_final()
+    plot_2d_final()
     plot_1d_efield()
     plot_mmsd()
     plot_neq_spectrum_with_model()
     #plot_efieldy_animation()
     #plot_coenergy_animation()
-    plot_2d_coenergy()
     plot_vg()
     plot_1d_efield_else()
     plot_1d_efield_ndependence()
