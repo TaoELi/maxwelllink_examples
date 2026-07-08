@@ -88,8 +88,8 @@ def plot_2d_background():
             vmin = vmax * 0.005
         else:
             data = np.load(coenergy_data_list[amp_index]) * (219474.63 / 36) * 0.01
-            vmin = np.percentile(data[time_list[0]], 95)
-            vmax = np.percentile(data[time_list[0]], 99)
+            vmin = np.percentile(data[time_list[0]], 98.5)
+            vmax = np.percentile(data[time_list[0]], 99.9)
         data_cache[key] = data
         scale_cache[key] = (vmin, vmax)
 
@@ -145,11 +145,11 @@ def plot_2d_background():
         cbar.set_label(cbar_label, fontsize=12)
         if kind == "coenergy":
             if amp_index == 0:
-                cbar.set_ticks([3, 4])
-                cbar.set_ticklabels([r"$3$", r"$4$"])
-            else:
-                cbar.set_ticks([4,5,6,7])
+                cbar.set_ticks([4, 5, 6, 7])
                 cbar.set_ticklabels([r"$4$", r"$5$", r"$6$", r"$7$"])
+            else:
+                cbar.set_ticks([8, 9, 12, 16])
+                cbar.set_ticklabels([r"$8$", r"$9$", r"$12$", r"$15$"])
         cbar.ax.yaxis.set_label_coords(4.2, 0.5)
 
     with h5py.File(f"./data/mxl_144*144/multimode_cavmd_144_eq.h5", "r") as f:
@@ -738,202 +738,121 @@ def plot_neq_spectrum_with_model():
     plt.tight_layout()
     clp.adjust(savefile=f"./figures/fig4_neq_spectrum_with_model.png")
 
-def plot_efieldy_animation():
+def plot_efield_coenergy_animation():
 
     from pathlib import Path
     from matplotlib.animation import FuncAnimation, FFMpegWriter, PillowWriter
-    from matplotlib.patches import Rectangle
 
-    axis_fontsize = 16
-    efieldidx = 2 # 2 corresponds to E0=0.002 a.u., 5 corresponds to E0=0.005 a.u.
-    input_file = Path(f"data/mxl_144*144/2d_144_144_efield_neq_0.00{efieldidx}.npy")
-    output_file = Path(f"figures/efieldy_2d_144_144_0.00{efieldidx}.mp4")
     shape = (144, 144)
     frame_stride = 1
     fps = 25
     dpi = 160
     max_frames = None
     dt_fs = 20
+    time_index_for_scale = 50
+    efield_data_list = ["./data/mxl_144*144/2d_144_144_efield_neq_0.002.npy", "./data/mxl_144*144/2d_144_144_efield_neq_0.005.npy"]
+    coenergy_data_list = ["./data/mxl_144*144/coenergy_36_0.002.npy", "./data/mxl_144*144/coenergy_36_0.005.npy"]
+    amp_values = ["0.002", "0.005"]
+    amp_list = [r"$E_0=2\times10^{-3}$ a.u.", r"$E_0=5\times10^{-3}$ a.u."]
+    cbar_labels = ["E-field intensity [a.u.]", r"$E_{\rm C=O}$ per molecule [$10^2$ cm$^{-1}$]"]
+    label_list = ["(a)", "(b)"]
 
-    input_file = Path(input_file)
-    output_file = Path(output_file)
-    amp = np.load(input_file)**2
+    for amp_index, amp_value in enumerate(amp_values):
+        efield_data = np.load(efield_data_list[amp_index])
+        coenergy_data = np.load(coenergy_data_list[amp_index]) * (219474.63 / 36) * 0.01
+        ntimes = min(efield_data.shape[0], coenergy_data.shape[0])
+        frame_ids = np.arange(0, ntimes, frame_stride)
+        if max_frames is not None:
+            frame_ids = frame_ids[:max_frames]
+        t_ps = np.arange(ntimes) * dt_fs / 1000
 
-    ntimes, ngrid = amp.shape
-    frame_ids = np.arange(0, ntimes, frame_stride)
-    if max_frames is not None:
-        frame_ids = frame_ids[:max_frames]
+        efield_ref = (np.abs(efield_data[time_index_for_scale, :]).reshape(shape))**2
+        efield_vmax = np.max(np.max(efield_ref))
+        efield_vmin = efield_vmax * 0.005
+        coenergy_vmin = np.percentile(coenergy_data[time_index_for_scale], 98.5)
+        coenergy_vmax = np.percentile(coenergy_data[time_index_for_scale], 99.9)
+        norms = [
+            LogNorm(vmin=efield_vmin, vmax=efield_vmax),
+            LogNorm(vmin=coenergy_vmin, vmax=coenergy_vmax),
+        ]
 
-    t_ps = np.arange(ntimes) * dt_fs / 1000
-    vmax = np.max(amp)
-    norm = LogNorm(vmin=0.001*vmax, vmax=vmax)
-    frame0 = amp[0].reshape(shape)
+        fig, axes = clp.initialize(1, 2, width=10.6, height=4.8, LaTeX=True, fontsize=12, return_fig_args=True)
+        images = []
+        time_texts = []
+        markers = []
+        frame0_list = [
+            (np.abs(efield_data[0, :]).reshape(shape))**2,
+            coenergy_data[0],
+        ]
 
-    fig, ax = clp.initialize(1, 1, width=8.0, height=7.0, LaTeX=True, fontsize=12, return_fig_args=True)
+        for col, frame0 in enumerate(frame0_list):
+            pos = axes[col].imshow(frame0, aspect='equal', extent=[0, 144, 0, 144], origin="lower",
+                    cmap=cm.hot, interpolation='nearest', norm=norms[col])
+            images.append(pos)
+            axes[col].set_box_aspect(1)
+            clp.plotone([], [], axes[col], colors=["c-","c-"], ylabel=r"$L_y$ \ position \ [$\mu\rm{m}$]" if col==0 else None, xlabel=r"$L_x$ \ position \ [$\mu\rm{m}$]", showlegend=False)
+            axes[col].set_yticks([0,72, 144])
+            axes[col].set_yticklabels([r"$0$", r"$200$", r"$400$"])
+            axes[col].set_xticks([0,72, 144])
+            axes[col].set_xticklabels([r"$0$", r"$200$", r"$400$"])
+            if col != 0:
+                axes[col].set_yticklabels([])
+            time_texts.append(axes[col].text(0.98, 0.18, "", transform=axes[col].transAxes, fontsize=12, fontweight='bold', va='top', ha='right', color="w"))
+            axes[col].text(0.02, 0.98, label_list[col], transform=axes[col].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="w")
+            axes[col].text(0.98, 0.08, amp_list[amp_index], transform=axes[col].transAxes, fontsize=12, fontweight='bold', va='top', ha='right', color="w")
+            if col == 0:
+                axes[col].text(0.55, 0.95, r"$k_{\parallel} \ =$"+rf"$ \ 450 \ $"+r"$\rm{cm}^{-1}$", transform=axes[col].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="w")
+                axes[col].text(0.55, 0.85, r"$W_{\rm ph}=$"+rf"$ \ 0.61 \ $", transform=axes[col].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="w")
 
-    image = ax.imshow(
-        frame0,
-        aspect="equal",
-        origin="lower",
-        cmap=cm.hot,
-        interpolation="nearest",
-        norm=norm,
-        extent=(0.5, shape[1] + 0.5, 0.5, shape[0] + 0.5),
-    )
+            marker_center = (85, 72)
+            marker_width = 20
+            marker_height = 24
+            marker_linewidth = 1.5
+            center_x, center_y = marker_center
+            center_marker = Rectangle(
+                (center_x - marker_width / 2, center_y - marker_height / 2),
+                marker_width,
+                marker_height,
+                fill=False,
+                edgecolor="cyan",
+                linewidth=marker_linewidth,
+                zorder=3,
+            )
+            axes[col].add_patch(center_marker)
+            markers.append(center_marker)
 
-    marker_center = (85, 72)
-    marker_width = 30
-    marker_height = 24
-    marker_linewidth = 1.5
-    if marker_center is None:
-        marker_center = ((shape[1] + 1) / 2, (shape[0] + 1) / 2)
-    center_x, center_y = marker_center
-    center_marker = Rectangle(
-        (center_x - marker_width / 2, center_y - marker_height / 2),
-        marker_width,
-        marker_height,
-        fill=False,
-        edgecolor="cyan",
-        linewidth=marker_linewidth,
-        zorder=3,
-    )
-    ax.add_patch(center_marker)
+            cbar_ax = axes[col].inset_axes([1.04, 0.0, 0.055, 1.0])
+            cbar = fig.colorbar(pos, cax=cbar_ax)
+            cbar.ax.tick_params(labelsize=12)
+            cbar.set_label(cbar_labels[col], fontsize=12)
+            if col == 1:
+                if amp_index == 0:
+                    cbar.set_ticks([4, 5, 6, 7])
+                    cbar.set_ticklabels([r"$4$", r"$5$", r"$6$", r"$7$"])
+                else:
+                    cbar.set_ticks([8, 9, 12, 16])
+                    cbar.set_ticklabels([r"$8$", r"$9$", r"$12$", r"$15$"])
+            cbar.ax.yaxis.set_label_coords(4.2, 0.5)
 
-    time_text = ax.text(0.98, 0.95, "", transform=ax.transAxes, fontsize=axis_fontsize, fontweight="bold", va="top", ha="right", color="w")
-    ax.text(0.98, 0.08, r"$E_0=%d\times10^{-3} \ \rm{a.u.}$" % efieldidx, transform=ax.transAxes, fontsize=axis_fontsize, fontweight="bold", va="top", ha="right", color="w")
-    ax.text(0.05, 0.95, r"$k_{\parallel} \ =$"+rf"$ \ 450 \ $"+r"$\rm{cm}^{-1}$", transform=ax.transAxes, fontsize=axis_fontsize, fontweight='bold', va='top', ha='left', color="w")
-    ax.text(0.05, 0.9, r"$W_{\rm ph}=$"+rf"$ \ 0.61 \ $", transform=ax.transAxes, fontsize=axis_fontsize, fontweight='bold', va='top', ha='left', color="w")
-    ax.set_xlabel(r"$L_x$ \ position \ [$\mu\rm{m}$]", fontsize=axis_fontsize)
-    ax.set_ylabel(r"$L_y$ \ position \ [$\mu\rm{m}$]", fontsize=axis_fontsize)
-    ax.set_box_aspect(shape[0] / shape[1])
-    ax.set_xlim(0.5, shape[1] + 0.5)
-    ax.set_ylim(0.5, shape[0] + 0.5)
-    ax.set_xticks([1, max(1, shape[1] // 2), shape[1]])
-    ax.set_yticks([1, max(1, shape[0] // 2), shape[0]])
-    ax.set_xticklabels([r"$0$", r"$200$", r"$400$"])
-    ax.set_yticklabels([r"$0$", r"$200$", r"$400$"])
-    ax.tick_params(axis="both", which="major", labelsize=axis_fontsize)
-    cbar_ax = fig.add_axes([0.84, 0.12, 0.025, 0.79])
-    cbar = fig.colorbar(image, cax=cbar_ax)
-    cbar.set_label(r"$\rm{a.u.}$", fontsize=axis_fontsize)
-    cbar.ax.tick_params(labelsize=axis_fontsize)
-    cbar.set_label("E-field intensity [a.u.]", fontsize=12)
-    fig.subplots_adjust(left=0.13, right=0.82, bottom=0.12, top=0.91)
+        fig.subplots_adjust(left=0.08, right=0.88, bottom=0.15, top=0.94, wspace=0.48)
 
-    def update(frame_id):
-        image.set_data(amp[frame_id].reshape(shape))
-        time_text.set_text(f"t = {t_ps[frame_id]:.3f} ps")
-        return image, time_text, center_marker
+        def update(frame_id):
+            images[0].set_data((np.abs(efield_data[frame_id, :]).reshape(shape))**2)
+            images[1].set_data(coenergy_data[frame_id])
+            for time_text in time_texts:
+                time_text.set_text(r"$t=%.1f$ ps" % t_ps[frame_id])
+            return images + time_texts + markers
 
-    ani = FuncAnimation(fig, update, frames=frame_ids, interval=1000 / fps, blit=False)
-
-    output_file.parent.mkdir(parents=True, exist_ok=True)
-    if output_file.suffix.lower() == ".gif":
-        writer = PillowWriter(fps=fps)
-    else:
-        writer = FFMpegWriter(fps=fps, bitrate=2400)
-    ani.save(output_file, writer=writer, dpi=dpi)
-    plt.close(fig)
-    print(f"Saved animation to {output_file}")
-
-def plot_coenergy_animation():
-
-    from pathlib import Path
-    from matplotlib.animation import FuncAnimation, FFMpegWriter, PillowWriter
-    from matplotlib.patches import Rectangle
-
-    axis_fontsize = 16
-    efieldidx = 5 # 2 corresponds to E0=0.002 a.u., 5 corresponds to E0=0.005 a.u.
-    input_file = Path(f"data/mxl_144*144/coenergy_36_0.00{efieldidx}.npy")
-    output_file = Path(f"figures/coenergy_2d_144_144_0.00{efieldidx}.mp4")
-    shape = (144, 144)
-    frame_stride = 1
-    fps = 25
-    dpi = 160
-    max_frames = None
-    dt_fs = 20
-
-    input_file = Path(input_file)
-    output_file = Path(output_file)
-    amp = np.abs(np.load(input_file)) * (219474.63 / 36) * 0.01
-
-    ntimes = amp.shape[0]
-    frame_ids = np.arange(0, ntimes, frame_stride)
-    if max_frames is not None:
-        frame_ids = frame_ids[:max_frames]
-
-    t_ps = np.arange(ntimes) * dt_fs / 1000
-    vmin = np.percentile(amp, 60)
-    vmax = np.percentile(amp, 99)
-    norm = LogNorm(vmin=vmin, vmax=vmax)
-    frame0 = amp[0].reshape(shape)
-
-    fig, ax = clp.initialize(1, 1, width=8.0, height=7.0, LaTeX=True, fontsize=12, return_fig_args=True)
-
-    image = ax.imshow(
-        frame0,
-        aspect="equal",
-        origin="lower",
-        cmap=cm.hot,
-        interpolation="nearest",
-        norm=norm,
-        extent=(0.5, shape[1] + 0.5, 0.5, shape[0] + 0.5),
-    )
-
-    marker_center = (85, 72)
-    marker_width = 30
-    marker_height = 24
-    marker_linewidth = 1.5
-    if marker_center is None:
-        marker_center = ((shape[1] + 1) / 2, (shape[0] + 1) / 2)
-    center_x, center_y = marker_center
-    center_marker = Rectangle(
-        (center_x - marker_width / 2, center_y - marker_height / 2),
-        marker_width,
-        marker_height,
-        fill=False,
-        edgecolor="cyan",
-        linewidth=marker_linewidth,
-        zorder=3,
-    )
-    ax.add_patch(center_marker)
-
-    time_text = ax.text(0.98, 0.95, "", transform=ax.transAxes, fontsize=axis_fontsize, fontweight="bold", va="top", ha="right", color="w")
-    ax.text(0.98, 0.08, r"$E_0=%d\times10^{-3} \ \rm{a.u.}$" % efieldidx, transform=ax.transAxes, fontsize=axis_fontsize, fontweight="bold", va="top", ha="right", color="w")
-    ax.text(0.05, 0.95, r"$k_{\parallel} \ =$"+rf"$ \ 450 \ $"+r"$\rm{cm}^{-1}$", transform=ax.transAxes, fontsize=axis_fontsize, fontweight='bold', va='top', ha='left', color="w")
-    ax.text(0.05, 0.9, r"$W_{\rm ph}=$"+rf"$ \ 0.61 \ $", transform=ax.transAxes, fontsize=axis_fontsize, fontweight='bold', va='top', ha='left', color="w")
-    ax.set_xlabel(r"$L_x$ \ position \ [$\mu\rm{m}$]", fontsize=axis_fontsize)
-    ax.set_ylabel(r"$L_y$ \ position \ [$\mu\rm{m}$]", fontsize=axis_fontsize)
-    ax.set_box_aspect(shape[0] / shape[1])
-    ax.set_xlim(0.5, shape[1] + 0.5)
-    ax.set_ylim(0.5, shape[0] + 0.5)
-    ax.set_xticks([1, max(1, shape[1] // 2), shape[1]])
-    ax.set_yticks([1, max(1, shape[0] // 2), shape[0]])
-    ax.set_xticklabels([r"$0$", r"$200$", r"$400$"])
-    ax.set_yticklabels([r"$0$", r"$200$", r"$400$"])
-    ax.tick_params(axis="both", which="major", labelsize=axis_fontsize)
-    cbar_ax = fig.add_axes([0.84, 0.12, 0.025, 0.79])
-    cbar = fig.colorbar(image, cax=cbar_ax)
-    cbar.set_label(r"$\rm{a.u.}$", fontsize=axis_fontsize)
-    cbar.ax.tick_params(labelsize=axis_fontsize)
-    cbar.set_label(r"$E_{\mathrm{C=O}}$ per molecule [$10^2$ cm$^{-1}$]", fontsize=12)
-    fig.subplots_adjust(left=0.13, right=0.82, bottom=0.12, top=0.91)
-
-    def update(frame_id):
-        image.set_data(amp[frame_id].reshape(shape))
-        time_text.set_text(f"t = {t_ps[frame_id]:.3f} ps")
-        return image, time_text, center_marker
-
-    ani = FuncAnimation(fig, update, frames=frame_ids, interval=1000 / fps, blit=False)
-
-    output_file.parent.mkdir(parents=True, exist_ok=True)
-    if output_file.suffix.lower() == ".gif":
-        writer = PillowWriter(fps=fps)
-    else:
-        writer = FFMpegWriter(fps=fps, bitrate=2400)
-    ani.save(output_file, writer=writer, dpi=dpi)
-    plt.close(fig)
-    print(f"Saved animation to {output_file}")
+        ani = FuncAnimation(fig, update, frames=frame_ids, interval=1000 / fps, blit=False)
+        output_file = Path(f"figures/efield_coenergy_2d_144_144_{amp_value}.mp4")
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        if output_file.suffix.lower() == ".gif":
+            writer = PillowWriter(fps=fps)
+        else:
+            writer = FFMpegWriter(fps=fps, bitrate=2400)
+        ani.save(output_file, writer=writer, dpi=dpi)
+        plt.close(fig)
+        print(f"Saved animation to {output_file}")
 
 def plot_vg():
     fig, axes = clp.initialize(1, 2, width=4.3*2, height=4.3*0.618*1.1, LaTeX=True, fontsize=12, return_fig_args=True)
@@ -1189,8 +1108,7 @@ if __name__ == "__main__":
     plot_1d_efield()
     plot_mmsd()
     plot_neq_spectrum_with_model()
-    #plot_efieldy_animation()
-    #plot_coenergy_animation()
+    plot_efield_coenergy_animation()
     plot_vg()
     plot_1d_efield_else()
     plot_1d_efield_ndependence()
