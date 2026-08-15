@@ -5,9 +5,11 @@ freq=2438.84
 
 CURRENTFOLDER=$(pwd)
 for nidx in {0..3}; do
-    cp summit_all.sh summit_all_"$nidx".sh
-    sed -i "s|bridge_prefix=\"rtx4090_\"|bridge_prefix=\"rtx4060_${nidx}\"|" "summit_all_${nidx}.sh"
-    sh summit_all_"$nidx".sh "$up" "$freq" "$amp" "${ngrid_list[$nidx]}"
-    sleep 1s
-    rm summit_all_"$nidx".sh
+    for nframe in {0..9}; do
+        cp summit_all.sh summit_all_"$nidx".sh
+        sed -i "s|bridge_prefix=\"rtx4090_\"|bridge_prefix=\"rtx4060_${nidx}\"|" "summit_all_${nidx}.sh"
+        sh summit_all_"$nidx".sh "$up" "$freq" "$amp" "${ngrid_list[$nidx]}" "${nframe}"
+        sleep 0.1s
+        rm summit_all_"$nidx".sh
+    done
 done

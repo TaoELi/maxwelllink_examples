@@ -13,7 +13,8 @@ cp in_mxl.lmp in_$BOX_ID.lmp
 sed -i -e "s/HOST/$HOST/g" in_$BOX_ID.lmp
 sed -i -e "s/PORT/$PORT/g" in_$BOX_ID.lmp
 sed -i -e "s/BOX_ID/$BOX_ID/g" in_$BOX_ID.lmp
-randomseed=$((100 * BOX_ID))
+sample_idx=-1
+randomseed=$((100 * BOX_ID + sample_idx))
 sed -i -e "s/velocity all create 300.0 2345187/velocity all create 300.0 $randomseed/g" in_$BOX_ID.lmp
 
 # check whether lmp_mxl command is available

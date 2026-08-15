@@ -36,7 +36,7 @@ hub.init_remote_bridges(
     save_file="aggregation.json",
 )
 
-coupling_strength = 5e-5 / np.sqrt(N_grid//36)
+coupling_strength = 2.5e-5
 print(f"Coupling strength: {coupling_strength:.3e} au")
 damping_au = 0e-4
 dt_fs = 0.5
@@ -47,7 +47,7 @@ fbcavity = mxl.FabryPerotCavity(
         coupling_axis="xy",
         n_grid_x=N_grid,
         y_grid_1d=[0.0],
-        delta_omega_x_au=12.5*(144/N_grid)*unit("cm_inv"),
+        delta_omega_x_au=12.5*unit("cm_inv"),
         delta_omega_y_au=0.0*unit("cm_inv"),
         n_mode_x=N_grid,
         n_mode_y=1,
@@ -73,7 +73,7 @@ molecule_source = k_parallel_pulse(
     center=(0.2, 0.0),
     size=(0.3, 1.0),
     target="photon",
-    amplitude_au=0.002*np.sqrt(N_grid/144),
+    amplitude_au=0.002,
 )
 
 

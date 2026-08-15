@@ -36,26 +36,24 @@ hub.init_remote_bridges(
     save_file="aggregation.json",
 )
 
-coupling_strength = 5e-5 / np.sqrt(N_grid//36)
+coupling_strength = 1e-5 / np.sqrt(N_grid//144)
 print(f"Coupling strength: {coupling_strength:.3e} au")
 damping_au = 0e-4
 dt_fs = 0.5
 
 fbcavity = mxl.FabryPerotCavity(
-        frequency_au=2320*unit("cm_inv"),
+        frequency_au=655.58*unit("cm_inv"),
         coupling_strength=coupling_strength,
         coupling_axis="xy",
-        n_grid_x=144,
-        n_repeat_x=N_grid//144,
+        n_grid_x=N_grid,
         y_grid_1d=[0.0],
-        delta_omega_x_au=12.5*unit("cm_inv"),
+        delta_omega_x_au=5.0*(144/N_grid)*unit("cm_inv"),
         delta_omega_y_au=0.0*unit("cm_inv"),
-        n_mode_x=144,
+        n_mode_x=N_grid,
         n_mode_y=1,
         abc_cutoff=0.05,
         save_mode_functions=True,
 )
-
 pulse_envelope = gaussian_pulse(
     amplitude_au=1.0,
     t0_au=0*unit("fs"),
@@ -63,16 +61,18 @@ pulse_envelope = gaussian_pulse(
     t_start_au=0.0*unit("fs"),
     t_end_au=1e3*unit("fs"),
 )
+
 # the pulse is basically envelope * cos(k_parallel * x - omega * t)
 # with the envelope being a simple broad-band Gaussian pulse
 molecule_source = k_parallel_pulse(
     cavity=fbcavity,
     envelope=pulse_envelope,
     omega_au=2413.82*unit("cm_inv"),
-    k_parallel_au=1*12.5*unit("cm_inv"),
+    k_parallel_au=1*5.0*(144/N_grid)*unit("cm_inv"),
     direction="x",
-    center=(0.2, 0.0),
+    center=(0.5, 0.0),
     size=(0.3, 1.0),
+    #target="molecule",
     target="photon",
     amplitude_au=0.002,
 )
@@ -88,15 +88,21 @@ sim = mxl.MultiModeSimulation(
     excited_mode_list=molecule_source.excited_mode_list,
     photon_pulse_drive=molecule_source,
     photon_pulse_axis= "y",
-    photon_partial_charge=0.066*np.sqrt(N_grid/144),
+    photon_partial_charge=0.066,
+    #excited_grid_list=molecule_source.excited_grid_list,
+    #molecule_pulse_drive=molecule_source,
+    #molecule_pulse_axis= "y",
     initializer=MaxwellBoltzmannInitializer(temperature_au=300.0*unit("K"), random_seed=random_seed),
     thermostat=LangevinThermostat(temperature_au=300.0*unit("K"), dt_au=dt_fs*unit("fs"), tau_au=5000*unit("fs"), random_seed=random_seed)
 )
 
-sim.run(steps=int(20000/dt_fs),
+sim.run(steps=int(20001/dt_fs),
         record_history=True,
         record_to_disk=True,
         disk_folder_address='./',
         h5_filename=f"multimode_cavmd_4t4_neq.h5",
         record_every_steps=4,
-        record_list=['effective_efield'],)
+        record_list=['qc',
+                     'photonic_energy',
+                     'effective_efield',
+                    ],)

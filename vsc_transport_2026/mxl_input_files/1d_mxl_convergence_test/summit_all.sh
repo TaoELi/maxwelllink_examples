@@ -2,18 +2,21 @@
 traj="$1"
 up_freq="$2"
 amp="$3"
-nframe="$4"
+ngrid="$4"
+nframe="$5"
 # change bridge prefix to avoid conflicting
 bridge_prefix="rtx4090_"
 rm -rf /tmp/"$bridge_prefix"*
 # the driver code should be submitted after the main code is submitted and running
-cp -r files zrun_"$amp"_"$traj"_"$nframe"/
-cd zrun_"$amp"_"$traj"_"$nframe"
+cp -r files zrun_"$amp"_"$traj"_"$ngrid"_"$nframe"/
+cd zrun_"$amp"_"$traj"_"$ngrid"_"$nframe"
 sed -i 's/unix_prefix="bridge_"/unix_prefix="'"$bridge_prefix"'"/' ./multmodes_vsc_hpc.py
 sed -i 's/HOST="bridge_${traj}"/HOST="'"$bridge_prefix"'${traj}"/' ./submit_driver.sh
 sed -i "s/omega_au=2413.82/omega_au=$up_freq/" ./multmodes_vsc_hpc.py
 sed -i "s/k_parallel_au=1/k_parallel_au=$traj/" ./multmodes_vsc_hpc.py
 sed -i "s/amplitude_au=0.002/amplitude_au=$amp/" ./multmodes_vsc_hpc.py
+sed -i "s/N_grid = 144/N_grid = $ngrid/" ./multmodes_vsc_hpc.py
+sed -i "s|#SBATCH --array=0-3|#SBATCH --array=0-$((ngrid / 36 -1))|" submit_driver.sh
 
 new_seed=$((114514 + nframe))
 sed -i "s/seed=114514/seed=${new_seed}/" multmodes_vsc_hpc.py

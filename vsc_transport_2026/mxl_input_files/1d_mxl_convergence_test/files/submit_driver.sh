@@ -1,10 +1,11 @@
 #!/bin/bash
 # following 3 commands required by OMP(OpenMP) only within one node
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=9
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=6
 #SBATCH --job-name=mxl_meso
-#SBATCH --partition=shared
-#SBATCH --time=1-00:00:00
+#SBATCH --partition=standard
+#SBATCH --time=7-00:00:00
 #SBATCH --array=0-3
 #SBATCH --output=./driver_%A_%a.out
 #SBATCH --error=./driver_%A_%a.err

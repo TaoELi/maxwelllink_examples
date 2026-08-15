@@ -45,12 +45,11 @@ fbcavity = mxl.FabryPerotCavity(
         frequency_au=2320*unit("cm_inv"),
         coupling_strength=coupling_strength,
         coupling_axis="xy",
-        n_grid_x=144,
-        n_repeat_x=N_grid//144,
+        n_grid_x=N_grid,
         y_grid_1d=[0.0],
-        delta_omega_x_au=12.5*unit("cm_inv"),
+        delta_omega_x_au=12.5*(144/N_grid)*unit("cm_inv"),
         delta_omega_y_au=0.0*unit("cm_inv"),
-        n_mode_x=144,
+        n_mode_x=N_grid,
         n_mode_y=1,
         abc_cutoff=0.05,
         save_mode_functions=True,
@@ -74,7 +73,7 @@ molecule_source = k_parallel_pulse(
     center=(0.2, 0.0),
     size=(0.3, 1.0),
     target="photon",
-    amplitude_au=0.002,
+    amplitude_au=0.002*np.sqrt(N_grid/144),
 )
 
 
@@ -88,7 +87,7 @@ sim = mxl.MultiModeSimulation(
     excited_mode_list=molecule_source.excited_mode_list,
     photon_pulse_drive=molecule_source,
     photon_pulse_axis= "y",
-    photon_partial_charge=0.066*np.sqrt(N_grid/144),
+    photon_partial_charge=0.066,
     initializer=MaxwellBoltzmannInitializer(temperature_au=300.0*unit("K"), random_seed=random_seed),
     thermostat=LangevinThermostat(temperature_au=300.0*unit("K"), dt_au=dt_fs*unit("fs"), tau_au=5000*unit("fs"), random_seed=random_seed)
 )
