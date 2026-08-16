@@ -152,11 +152,9 @@ def plot_2d_background():
                 cbar.set_ticklabels([r"$8$", r"$9$", r"$12$", r"$15$"])
         cbar.ax.yaxis.set_label_coords(4.2, 0.5)
 
-    with h5py.File(f"./data/mxl_144*144/multimode_cavmd_144_eq.h5", "r") as f:
-        data = {key: f[key][:] for key in f.keys()}
-    sp = np.zeros((5000,144))
-    for i in range(144):
-        x, sp[:,i] = ir_spectrum(data['qc'][:,i,1], 2)
+    qc_file = np.load("./data/mxl_144*144/qc_y.npy", allow_pickle=True).item()
+    sp = qc_file['sp']
+    x  = qc_file['freq']
     dx = x[2] - x[1]
     nstart, nend = int(2200 / dx), int(3000 / dx)
     x = x[nstart:nend]
@@ -300,19 +298,21 @@ def plot_1d_efield():
     length_list = [2600]*2
     vg = np.array([r"$%.3f\,c$"%(coeff[i]) for i in range(2)])
     label_list = {0 : ["(a)","(b)"], 1: ["(c)","(d)"], 2: ["(e)","(f)"]}
-    amp_list = [r"$%d\times10^{-3}$" % i for i in range(1,9,2)]
+    amp_dict = {0 : ["0.001", "0.0024", "0.003", "0.005", "0.007"], 1: ["0.001", "0.0016", "0.003", "0.005", "0.007"]}
     for j in range(2):
-        mt_list, mmsd_list = get_adaptive_emsd(uplist[j], coeff[j], amp_list=["0.001", "0.003", "0.005", "0.007"])
+        amp_list = [r"$%.1f\times10^{-3}$" % (float(i)*1000) for i in amp_dict[j]]
+        sp_list = [np.load(f"./data/mxl_144_efield/effective_efield_{uplist[j]}_{amp_dict[j][i]}.npy")[50:2551].T for i in range(len(amp_dict[j]))]
+        mt_list, mmsd_list = get_adaptive_emsd(uplist[j], coeff[j], amp_list=amp_dict[j], sp_list=sp_list)
         clp.plotone(mt_list, mmsd_list, axes[2,j], ylabel=r"$\mathrm{MSD}$ \ [$10^{4} \ \mu\rm{m}^2$]" if j == 0 else None, xlabel="time [ps]",
-                    showlegend=True if j==0 else False, legendloc=(0.22,0.35), legendFontSize=8, 
-                    xlim=[0,mt_list[0][-1]], ylim=[0, 0.05] if j==1 else [0, 0.15],
-                    labels=amp_list, colorMap=plt.cm.hot, colorMap_endpoint=0.6, alpha=0.4)
+                    showlegend=True, legendloc=(0.05,0.3), legendFontSize=8, 
+                    xlim=[0,mt_list[0][-1]], ylim=[0, 0.05] if j==1 else [0, 0.2],
+                    labels=amp_list, colorMap=plt.cm.hot, colorMap_endpoint=0.6, alpha=0.5)
         quad_t = mt_list[0][(mt_list[0] >= 1.0) & (mt_list[0] <= 4.0)]
         linear_t = mt_list[0][(mt_list[0] >= 2.0) & (mt_list[0] <= 5.0)]
-        quad_fit_params = [[0.008, -0.008608133962878038, 0.003689480540663409],
-                           [0.003316594835064373, -0.001936205081767636, 0.00029550969845358165]]
-        linear_fit_params = [[0.044870112820745794, -0.08911820204841633],
-                             [0.013325053829792976, -0.019916468480877206]]
+        quad_fit_params = [[0.010412225466983087, -0.009692823652307786, 0.002930743601640022],
+                           [0.0034124054608374583, -0.003780895807991756, 0.001182095496525906]]
+        linear_fit_params = [[0.0659900795219766, -0.13787260151910052],
+                             [0.01722295767678947, -0.03394572375462868]]
         quad_sampled_t = quad_fit_params[j][0] * quad_t**2 + quad_fit_params[j][1] * quad_t + quad_fit_params[j][2]
         linear_sampled_t = linear_fit_params[j][0] * linear_t + linear_fit_params[j][1]
         clp.plotone([quad_t], [quad_sampled_t], axes[2,j], colors=["g--"], showlegend=False, lw=1.5)
@@ -321,28 +321,25 @@ def plot_1d_efield():
         axes[2,j].text(0.68, 0.95, r"$k_{\parallel} \ =$"+rf"$ \ {k_parallel_list[j]} \ $"+r"$\rm{cm}^{-1}$", transform=axes[2,j].transAxes, fontsize=12, fontweight='bold', va='top', ha='right', color="k")
         axes[2,j].text(0.32, 0.85, r"$W_{\rm ph}=$"+rf"$ \ {wc_up[j]} \ $", transform=axes[2,j].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="k")
         axes[2,j].axvline(x=1, linestyle='-.', alpha=0.3, color="c")
-        axes[2,j].text(0.1, 0.85, "pulse \n on", transform=axes[2,j].transAxes, fontsize=12, fontweight='bold', va='top', ha='center', alpha=0.3, color="c")
+        axes[2,j].text(0.1, 0.9, "pulse \n on", transform=axes[2,j].transAxes, fontsize=12, fontweight='bold', va='top', ha='center', alpha=0.3, color="c")
         axes[2,j].text(0.22, 0.18, r"$\propto t^2$", transform=axes[2,j].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="g")
         axes[2,j].text(0.85, 0.65, r"$\propto t$", transform=axes[2,j].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="b")
     
     axes[2,1].set_yticks([0, 0.025, 0.05])
     axes[2,1].set_yticklabels([r"$0$", r"$0.4$", r"$0.8$"])
     axes[2,0].get_legend().set_title(r"$E_0$ [a.u.]")
-    axes[2,0].set_yticks([0, 0.05, 0.1, 0.15])
-    axes[2,0].set_yticklabels([r"$0$", r"$0.8$", r"$1.6$", r"$2.4$"])
+    axes[2,1].get_legend().set_title(r"$E_0$ [a.u.]")
+    axes[2,0].set_yticks([0, 0.05, 0.1, 0.15, 0.2])
+    axes[2,0].set_yticklabels([r"$0$", r"$0.8$", r"$1.6$", r"$2.4$", r"$3.2$"])
 
     amp = [0.001, 0.007]
     amp_list = [r"$E_0=1\times10^{-3}$ a.u.", r"$E_0=7\times10^{-3}$ a.u."]
     for y0 in range(2):
-        with h5py.File(f"./data/mxl_144_scanamp/multimode_cavmd_144_36_{amp[y0]}_neq.h5", "r") as feq:
-            eqref = {key: feq[key][:] for key in feq.keys()}
-        eqref = np.sum(np.reshape(eqref["effective_efield"][:, :, 1], (10000, 144, -1)), axis=2)**2    
-        vmax = np.max(np.max(eqref))
+        ref = np.load(f"./data/mxl_144_efield/effective_efield_24_{amp[y0]}.npy")
+        vmax = np.max(np.max(ref))
         vmin = vmax * 0.01 if y0 == 0 else vmax * 0.005
         for x0 in range(2):
-            with h5py.File(f"./data/mxl_144_scanamp/multimode_cavmd_144_{uplist[x0]}_{amp[y0]}_neq.h5", "r") as f:
-                data = {key: f[key][:] for key in f.keys()}
-            sp_avg = np.sum(np.reshape(data["effective_efield"][:, :, 1], (10000, 144, -1)), axis=2)**2
+            sp_avg = np.load(f"./data/mxl_144_efield/effective_efield_{uplist[x0]}_{amp[y0]}.npy")
             ntimes = sp_avg.shape[0]
             sp_avg = np.abs(sp_avg).T
             extent = [0 , 20, 0, 144]
@@ -369,7 +366,7 @@ def plot_1d_efield():
     clp.adjust(savefile=f"./figures/fig2_1d_efield.png")
 
 def get_adaptive_emsd(up, vg, amp_list, folder="./data/mxl_144_scanamp/", ngrid=144,
-                      reference_ngrid=144, scale_emsd_by_size=True):
+                      reference_ngrid=144, scale_emsd_by_size=True, sp_list=None):
 
     def smooth_nan(x, window_len=151, window="hamming"):
         x = np.asarray(x, dtype=float)
@@ -467,23 +464,32 @@ def get_adaptive_emsd(up, vg, amp_list, folder="./data/mxl_144_scanamp/", ngrid=
         return keep
 
     mt_list, mmsd_list = [], []
+    if sp_list is not None:
+        if len(sp_list) != len(amp_list):
+            raise ValueError("sp_list must have the same length as amp_list.")
     for j in range(len(amp_list)):
         mtimes = None
         if folder == "./data/mxl_n_dependence/" :
-            row_data = np.load(f"{folder}/multimode_cavmd_{ngrid}_{up}_{amp_list[j]}_neq.npy")
-            sp = np.mean(np.reshape(row_data, (10000, 144, -1)), axis=2)**2
-            sp = sp[50:2551, :].T
-        else :
-            with h5py.File(f"{folder}/multimode_cavmd_{ngrid}_{up}_{amp_list[j]}_neq.h5", "r") as f:
-                #sp = np.abs(f["effective_efield"][50:2551, :, 1]).T**2
-                sp = np.mean(np.reshape(f["effective_efield"][:, :, 1], (10000, 144, -1)), axis=2)**2
+            if sp_list is not None:
+                sp = sp_list[j]
+            else:
+                row_data = np.load(f"{folder}/multimode_cavmd_{ngrid}_{up}_{amp_list[j]}_neq.npy")
+                sp = np.mean(np.reshape(row_data, (10000, 144, -1)), axis=2)**2
                 sp = sp[50:2551, :].T
+        else :
+            if sp_list is not None:
+                sp = sp_list[j]
+            else:
+                with h5py.File(f"{folder}/multimode_cavmd_{ngrid}_{up}_{amp_list[j]}_neq.h5", "r") as f:
+                    #sp = np.abs(f["effective_efield"][50:2551, :, 1]).T**2
+                    sp = np.mean(np.reshape(f["effective_efield"][:, :, 1], (10000, 144, -1)), axis=2)**2
+                    sp = sp[50:2551, :].T
         actual_ngrid = sp.shape[0]
         x_grid_1d = np.arange(1, actual_ngrid + 1) / (actual_ngrid + 1)
         x0 = x_grid_1d[np.argmin(np.abs(x_grid_1d - 0.2))]
         mtimes = 2 * (sp.shape[1] - 1) / 1000
         t = np.linspace(0, mtimes, sp.shape[1])
-        if amp_list[j] in ["0.001", "0.002"]:
+        if amp_list[j] in ["0.001"]:
             x_mean = ballistic_guided_centroid(sp, t, x_grid_1d, x0, vg)
         else:
             x_mean = localization_aware_centroid(sp, t, x_grid_1d, x0, vg)
@@ -492,7 +498,7 @@ def get_adaptive_emsd(up, vg, amp_list, folder="./data/mxl_144_scanamp/", ngrid=
             continue
         first = np.where(finite)[0][0]
         displacement = x_mean - x_mean[first]
-        if amp_list[j] in ["0.001", "0.002"]:
+        if amp_list[j] in ["0.001"]:
             finite &= keep_before_reflection(t, displacement)
         size_scale = actual_ngrid / reference_ngrid if scale_emsd_by_size else 1.0
         MMSD = smooth_nan(displacement**2, window_len=101) * size_scale**2
@@ -505,6 +511,7 @@ def plot_mmsd():
 
     axes = clp.initialize(2, 2, width=2*4.3, height=4.3*0.618*1.1*2, LaTeX=True, fontsize=12)
     up_list = np.array([36, 42, 48, 54, 60, 66])
+    vg_up = np.array([0.11638023, 0.14234382, 0.17112003, 0.20126065, 0.23186782, 0.26334189])
     amp = ["0.001", "0.007"]
     amp_list = [r"$E_0=1\times10^{-3}$ a.u.", r"$E_0=7\times10^{-3}$ a.u."]
     label_list = {0 : ["(a)","(b)"], 1: ["(c)","(d)"]}
@@ -513,7 +520,8 @@ def plot_mmsd():
     for y0 in range(2):
         k_list, mean_list, std_list = [], [], []
         for idx, up in enumerate(up_list):
-            sp = np.load(f"./data/mxl_144_co/coenergy_144_{up}_{amp[y0]}.npy")
+            sp = np.load(f"./data/mxl_144_coenergy/coenergy_{up}_{amp[y0]}.npy")
+            sp = np.clip(sp - sp[0, None], 0.0, None)
             t_ps = np.arange(sp.shape[0]) * 2 / 1000
             time_window = (t_ps >= 10) & (t_ps <= 20)
             weight = sp[np.ix_(time_window, evaluate_range)]
@@ -538,7 +546,8 @@ def plot_mmsd():
         lower = np.maximum(msd_array - variance_array, 0.0)
         upper = msd_array + variance_array
         axes[y0,1].fill_between(k_parallel, lower, upper, color="0.75", alpha=0.5, linewidth=0)
-        clp.plotone([k_parallel], [msd_array], axes[y0,1], colors=["ro-"], showlegend=False, 
+        vg_dot_tf = (0.2 + vg_up * 0.75 * 2) * 144
+        clp.plotone([k_parallel]*2, [msd_array, vg_dot_tf], axes[y0,1], colors=["ro-", "c--"], showlegend=True, legendloc=(0.02,0.7), legendFontSize=8, labels=["MPL", r"$\tilde{v}_{\rm g} \cdot t_{\rm f}$"],
                     xlim=[425, 850],
                     ylabel=r"most probable location [$\mu$m]", xlabel=r"$k_{\parallel}$ [$\rm{cm}^{-1}$]" if y0==1 else None)
         axes[y0,1].text(0.08, 0.97, label_list[y0][1], transform=axes[y0,1].transAxes, fontsize=12, fontweight='bold', va='top', ha='right', color="k")
@@ -547,7 +556,7 @@ def plot_mmsd():
         axes[y0,1].set_yticklabels([r"$0$", r"$200$", r"$400$"])
 
     for y0 in range(2):
-        sp_avg = np.load(f"./data/mxl_144_co/coenergy_144_36_{amp[y0]}.npy")
+        sp_avg = np.load(f"./data/mxl_144_coenergy/coenergy_36_{amp[y0]}.npy")
         ntimes = sp_avg.shape[0]
         sp_avg = np.abs(sp_avg).T * (219474.63 / 36) * 10**(-(y0+2)) # convert to cm^-1 and scale for better visualization
         vmin = np.percentile(sp_avg, 60)
@@ -565,8 +574,8 @@ def plot_mmsd():
         cbar_ax = axes[y0,0].inset_axes([1.04, 0.0, 0.055, 1.0])
         cbar = axes[y0,0].figure.colorbar(pos, cax=cbar_ax)
         if y0 == 0:
-            cbar.set_ticks([2.4, 2.6, 2.8, 3, 3.2])
-            cbar.set_ticklabels([r"$2.4$", r"$2.6$", r"$2.8$", r"$3.0$", r"$3.2$"])
+            cbar.set_ticks([2.3, 2.4, 2.5, 2.6, 2.7, 2.8])
+            cbar.set_ticklabels([r"$2.3$", r"$2.4$", r"$2.5$", r"$2.6$", r"$2.7$", r"$2.8$"])
         else:
             cbar.set_ticks([1, 2, 3, 4])
             cbar.set_ticklabels([r"$1.0$", r"$2.0$", r"$3.0$", r"$4.0$"])
@@ -617,12 +626,10 @@ def plot_neq_spectrum_with_model():
     for x0 in range(2):
         sim_ax = axes[0,x0]
         energy_ax = axes[1,x0]
-        with h5py.File(f"./data/mxl_144_qc/multimode_cavmd_144_36_{amp[x0]}_neq.h5", "r") as f:
-            data = {key: f[key][:] for key in f.keys()}
-        sp = np.zeros((5000,144))
-        for i in range(144):
-            x, sp[:,i] = ir_spectrum(data['qc'][:,i,1], dt_fs)
-        dx = x[2] - x[1]
+        qc_file = np.load(f"./data/mxl_144_qc/qc_spectra_36_{amp[x0]}.npy", allow_pickle=True).item()
+        x = qc_file["freq"]
+        sp = qc_file["sp"]
+        dx = x[1] - x[0]
         nstart, nmid, nend = int(2200 / dx), int(2350 / dx), int(3000 / dx)
         x = x[nstart:nend]
         sp = np.abs(sp[nstart:nend,:]) / 1e34
@@ -663,7 +670,7 @@ def plot_neq_spectrum_with_model():
         sim_ax.annotate('', xy=(450, 2450), xytext=(450, 2550), arrowprops=dict(facecolor=annotation_color, edgecolor=annotation_color, arrowstyle='->', alpha=0.8, lw=2), fontsize=20)
         sim_ax.text(0.45, 0.52, "UP excitation", transform=sim_ax.transAxes, fontsize=12, fontweight='bold', va='top', ha='right', color=annotation_color)
 
-        phe = data["photonic_energy"][:3001, :]
+        phe = np.load(f"./data/mxl_144_qc/photonic_energy_36_{amp[x0]}.npy")[:3001, :]
         t = np.arange(phe.shape[0]) * 2 / 1000
         phes = [smooth(np.sum(phe[:,:5], axis=1)), smooth(np.sum(phe[:,5:10], axis=1)), smooth(np.sum(phe[:,25:30], axis=1)), smooth(np.sum(phe[:,30:35], axis=1)), smooth(phe[:,35])]
         labels = [r"$0$-$62.5$", r"$62.5$-$125$", r"$312.5$-$375$", r"$375$-$450$", r"$450$"]
@@ -856,11 +863,9 @@ def plot_efield_coenergy_animation():
 
 def plot_vg():
     fig, axes = clp.initialize(1, 2, width=4.3*2, height=4.3*0.618*1.1, LaTeX=True, fontsize=12, return_fig_args=True)
-    with h5py.File(f"./data/mxl_144*144/multimode_cavmd_144_eq.h5", "r") as f:
-        data = {key: f[key][:] for key in f.keys()}
-    sp_full = np.zeros((5000,144))
-    for i in range(144):
-        x, sp_full[:,i] = ir_spectrum(data['qc'][:,i,1], 2)
+    qc_file = np.load("./data/mxl_144*144/qc_y.npy", allow_pickle=True).item()
+    sp_full = qc_file['sp']
+    x = qc_file['freq']
     dx = x[2] - x[1]
     nstart, nmid, nend = int(2200 / dx), int(2350 / dx), int(3000 / dx)
     x = x[nstart:nend]
@@ -932,19 +937,20 @@ def plot_1d_efield_else():
     label_list = {0 : ["(a)","(b)", "(c)"], 1: ["(d)","(e)","(f)"], 2: ["(g)","(h)","(i)"]}
     amp_list = [r"$%d\times10^{-3}$" % i for i in range(1,9,2)]
     for j in range(3):
-        mt_list, mmsd_list = get_adaptive_emsd(uplist[j], coeff[j], amp_list=["0.001", "0.003", "0.005", "0.007"])
+        sp_list = [np.load(f"./data/mxl_144_efield/effective_efield_{uplist[j]}_{i}.npy")[50:2551].T for i in ["0.001", "0.003", "0.005", "0.007"]]
+        mt_list, mmsd_list = get_adaptive_emsd(uplist[j], coeff[j], amp_list=["0.001", "0.003", "0.005", "0.007"], sp_list=sp_list)
         clp.plotone(mt_list, mmsd_list, axes[2,j], ylabel=r"$\mathrm{MSD}$ \ [$10^{4} \ \mu\rm{m}^2$]" if j == 0 else None, xlabel="time [ps]",
                     showlegend=True if j==0 else False, legendloc=(0.25,0.3), legendFontSize=8, 
                     xlim=[0,mt_list[0][-1]], ylim=[0,0.05*(j+1)],
                     labels=amp_list, colorMap=plt.cm.hot, colorMap_endpoint=0.6, alpha=0.4)
         quad_t = mt_list[0][(mt_list[0] >= 1.0) & (mt_list[0] <= 4.5)]
         linear_t = mt_list[0][(mt_list[0] >= 2.0) & (mt_list[0] <= 5.0)]
-        quad_fit_params = [[0.003969807815718676, -0.002321773431376476, 0.0006899936493188445],
-                           [0.006300141003230975, -0.008397181870203245, 0.004568356292778106],
-                           [0.01990514613643173, -0.023893159803765197, 0.015850866748061753]]
-        linear_fit_params = [[0.016093165436323338, -0.020920098506520733],
-                             [0.039898507445015934, -0.08864441131004144],
-                             [0.13881807081968064, -0.3094249434532433]]
+        quad_fit_params = [[0.004531527975714095, -0.003958012370730053, 0.0010863142741930323],
+                           [0.005996671732206156, -0.005798312959837168, 0.002028280858851599],
+                           [0.021316608498041262, -0.017371908799149804, 0.004642095526640439]]
+        linear_fit_params = [[0.024528881948415075, -0.04702675946500917],
+                             [0.03571352305202849, -0.07123119558557142],
+                             [0.13980444375345502, -0.29105386505480835]]
         quad_sampled_t = quad_fit_params[j][0] * quad_t**2 + quad_fit_params[j][1] * quad_t + quad_fit_params[j][2]
         linear_sampled_t = linear_fit_params[j][0] * linear_t + linear_fit_params[j][1]
         clp.plotone([quad_t], [quad_sampled_t], axes[2,j], colors=["g--"], showlegend=False, lw=1.5)
@@ -968,15 +974,11 @@ def plot_1d_efield_else():
     amp = [0.001, 0.007]
     amp_list = [r"$E_0=1\times10^{-3}$ a.u.", r"$E_0=7\times10^{-3}$ a.u."]
     for y0 in range(2):
-        with h5py.File(f"./data/mxl_144_scanamp/multimode_cavmd_144_24_{amp[y0]}_neq.h5", "r") as feq:
-            eqref = {key: feq[key][:] for key in feq.keys()}
-        eqref = np.sum(np.reshape(eqref["effective_efield"][:, :, 1], (10000, 144, -1)), axis=2)**2    
-        vmax = np.max(np.max(eqref))
+        ref = np.load(f"./data/mxl_144_efield/effective_efield_24_{amp[y0]}.npy")
+        vmax = np.max(np.max(ref))
         vmin = vmax * 0.01 if y0 == 0 else vmax * 0.005
         for x0 in range(3):
-            with h5py.File(f"./data/mxl_144_scanamp/multimode_cavmd_144_{uplist[x0]}_{amp[y0]}_neq.h5", "r") as f:
-                data = {key: f[key][:] for key in f.keys()}
-            sp_avg = np.sum(np.reshape(data["effective_efield"][:, :, 1], (10000, 144, -1)), axis=2)**2
+            sp_avg = np.load(f"./data/mxl_144_efield/effective_efield_{uplist[x0]}_{amp[y0]}.npy")
             ntimes = sp_avg.shape[0]
             sp_avg = np.abs(sp_avg).T
             extent = [0 , 20, 0, 144]
@@ -1011,7 +1013,8 @@ def plot_1d_efield_ndependence():
     n_list = [144, 288, 576, 1152]
 
     for j in range(4):
-        mt_list, mmsd_list = get_adaptive_emsd(36, 0.11638023, amp_list=["0.007"], folder="./data/mxl_n_dependence/", ngrid=n_list[j])
+        sp_list = [np.load(f"./data/mxl_n_dependence/effective_efield_{n_list[j]}_36_0.007.npy")[50:2551].T]
+        mt_list, mmsd_list = get_adaptive_emsd(36, 0.11638023, amp_list=["0.007"], folder="./data/mxl_n_dependence/", sp_list=sp_list)
         clp.plotone(mt_list, mmsd_list, axes[1,j], ylabel=r"$\mathrm{MSD}$ \ [$10^{4} \ \mu\rm{m}^2$]" if j == 0 else None, xlabel="time [ps]",
                     showlegend=True if j==0 else False, legendloc=(0.72,0.7), legendFontSize=8, 
                     xlim=[0,mt_list[0][-1]], ylim=[0,0.05],
@@ -1026,13 +1029,11 @@ def plot_1d_efield_ndependence():
         axes[1,j].text(0.1, 0.85, "pulse \n on", transform=axes[1,j].transAxes, fontsize=12, fontweight='bold', va='top', ha='center', alpha=0.3, color="c")
     axes[1,0].get_legend().set_title(r"$E_0$ [a.u.]")
 
-    refdata = np.load("./data/mxl_n_dependence/multimode_cavmd_1152_36_0.007_neq.npy")
-    refsp = np.mean(np.reshape(refdata, (10000, 144, -1)), axis=2)**2
+    refsp = np.load(f"./data/mxl_n_dependence/effective_efield_1152_36_0.007.npy")
     vmax = np.max(np.max(refsp))
     vmin = vmax * 0.01
     for x0 in range(4):
-        data = np.load(f"./data/mxl_n_dependence/multimode_cavmd_{n_list[x0]}_36_0.007_neq.npy")
-        sp_avg = np.mean(np.reshape(data, (10000, 144, -1)), axis=2)**2
+        sp_avg = np.load(f"./data/mxl_n_dependence/effective_efield_{n_list[x0]}_36_0.007.npy")
         ntimes = sp_avg.shape[0]
         sp_avg = np.abs(sp_avg).T
         extent = [0 , 20, 0, 144]
@@ -1056,6 +1057,7 @@ def plot_1d_efield_ndependence():
             cbar = axes[0, x0].figure.colorbar(pos, cax=cbar_ax)
             cbar.ax.tick_params(labelsize=12)
             cbar.set_label("E-field intensity [a.u.]", fontsize=12)
+            cbar.ax.minorticks_off()
     plt.rcParams["axes.axisbelow"] = False
     plt.tight_layout()
     clp.adjust(savefile=f"./figures/figS3_1d_efield_numberdependence.png")
@@ -1071,7 +1073,7 @@ def plot_addition_mmsd():
 
     for y0 in range(2):
         for x0 in range(4):
-            sp_avg = np.load(f"./data/mxl_144_co/coenergy_144_{up_list[x0]}_{amp[y0]}.npy")
+            sp_avg = np.load(f"./data/mxl_144_coenergy/coenergy_{up_list[x0]}_{amp[y0]}.npy")
             ntimes = sp_avg.shape[0]
             sp_avg = np.abs(sp_avg).T * (219474.63 / 36) * 10**(-(y0+2)) # convert to cm^-1 and scale for better visualization
             vmin = np.percentile(sp_avg, 60)
@@ -1089,11 +1091,13 @@ def plot_addition_mmsd():
             cbar_ax = axes[y0,x0].inset_axes([1.04, 0.0, 0.055, 1.0])
             cbar = axes[y0,x0].figure.colorbar(pos, cax=cbar_ax)
             if y0 == 0:
-                cbar.set_ticks([2.5, 3, 3.5, 4])
-                cbar.set_ticklabels([r"$2.5$", r"$3.0$", r"$3.5$", r"$4.0$"])
+                cbar.set_ticks([2.2, 2.5, 2.8, 3])
+                cbar.set_ticklabels([r"$2.2$", r"$2.5$", r"$2.8$", r"$3.0$"])
+                cbar.ax.minorticks_off()
             else:
                 cbar.set_ticks([1, 2, 3, 4])
                 cbar.set_ticklabels([r"$1.0$", r"$2.0$", r"$3.0$", r"$4.0$"])
+                cbar.ax.minorticks_off()
             cbar.ax.tick_params(labelsize=12)
             if x0 == 3: cbar.set_label(r"C=O energy [$10^{%d} \ $cm$^{-1}$]"%(y0+2), fontsize=12)
             axes[y0,x0].hlines(144*0.05, 0, 20, colors="c", linestyles="--", lw=1.5)
@@ -1102,6 +1106,216 @@ def plot_addition_mmsd():
     plt.rcParams["axes.axisbelow"] = False
     plt.tight_layout()
     clp.adjust(savefile=f"./figures/figS4_addition_coenergy.png")
+
+def plot_convergence():
+
+    axes = clp.initialize(3, 4, width=4*4.3, height=4.3*0.618*1.1*3, LaTeX=True, fontsize=12)
+    label_list = {0 : ["(a)","(b)","(c)","(d)"], 1: ["(e)","(f)","(g)","(h)"], 2: ["(i)","(j)","(k)","(l)"]}
+    repeat_list = [1, 3, 5, 10]
+    amp = [0.001, 0.007]
+    amp_list = [r"$E_0=1\times10^{-3}$ a.u.", r"$E_0=7\times10^{-3}$ a.u."]
+    for y0 in range(2):
+        eqref = np.load(f"./data/mxl_convergence_test/multimode_cavmd_144_24_{amp[y0]}_1_neq_final.npy")
+        vmax = np.max(np.max(eqref))
+        vmin = vmax * 0.01 if y0 == 0 else vmax * 0.005
+        for x0 in range(4):
+            sp_avg = np.load(f"./data/mxl_convergence_test/multimode_cavmd_144_24_{amp[y0]}_{repeat_list[x0]}_neq_final.npy")
+            ntimes = sp_avg.shape[0]
+            sp_avg = np.abs(sp_avg).T
+            extent = [0 , 20, 0, 144]
+            pos = axes[y0, x0].imshow(sp_avg, aspect='auto', extent=extent, origin="lower",
+                    cmap=cm.hot, interpolation='nearest',
+                    norm=LogNorm(vmin=vmin, vmax=vmax))
+            t = np.linspace(0,(ntimes-1)*2,ntimes)[:2600]/1000
+            xs = [t]
+            ys = [144*0.2+144*0.75*0.07069759*t]
+            clp.plotone(xs, ys, axes[y0, x0], colors=["c--"], ylabel=r"$L_x$ position \ [$\mu\rm{m}$]" if x0==0 else None, xlabel="time [ps]" if y0==1 else None, showlegend=False, lw=1.5)
+            axes[y0, x0].set_yticks([0,72, 144])
+            axes[y0, x0].set_yticklabels([r"$0$", r"$200$", r"$400$"])
+            axes[y0, x0].text(0.6, 0.95, r"$k_{\parallel} \ =$"+rf"$ \ 300 \ $"+r"$\rm{cm}^{-1}$", transform=axes[y0, x0].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="w")
+            axes[y0, x0].text(0.6, 0.85, r"$W_{\rm ph}=$"+rf"$ \ 0.55 \ $", transform=axes[y0, x0].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="w")
+            axes[y0, x0].text(0.98, 0.1, amp_list[y0], transform=axes[y0, x0].transAxes, fontsize=12, fontweight='bold', va='top', ha='right', color="w")
+            axes[y0, x0].text(0.02, 0.98, label_list[y0][x0], transform=axes[y0, x0].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="w")
+            axes[y0, x0].text(0.02, 0.1, r"$\tilde{v}_g \ = \ $"+r"$0.071 \ c$", transform=axes[y0, x0].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="c")
+            axes[y0, x0].text(0.98, 0.2, f"averaged over {repeat_list[x0]} times", transform=axes[y0, x0].transAxes, fontsize=12, fontweight='bold', va='top', ha='right', color="w")
+            cbar_ax = axes[y0, x0].inset_axes([1.04, 0.0, 0.055, 1.0])
+            cbar = axes[y0, x0].figure.colorbar(pos, cax=cbar_ax)
+            cbar.ax.tick_params(labelsize=12)
+            cbar.set_label("E-field intensity [a.u.]", fontsize=12)
+
+    amp_name_list = ["0.001", "0.0016", "0.003", "0.005", "0.007"]
+    amp_list = [r"$%.1f\times10^{-3}$" % (float(i)*1000) for i in amp_name_list]
+    for x0 in range(4):
+        sp_list = []
+        for y0 in range(len(amp_name_list)):
+            sp_avg = np.load(f"./data/mxl_convergence_test/multimode_cavmd_144_24_{amp_name_list[y0]}_{repeat_list[x0]}_neq_final.npy")
+            sp_list.append(sp_avg[50:2551, :].T)
+        
+        mt_list, mmsd_list = get_adaptive_emsd(24, 0.07069759, 
+                                               amp_list=amp_name_list, 
+                                               folder="./data/mxl_convergence_test/",
+                                               sp_list=sp_list)
+        clp.plotone(mt_list, mmsd_list, axes[2,x0], ylabel=r"$\mathrm{MSD}$ \ [$10^{4} \ \mu\rm{m}^2$]" if x0 == 0 else None, xlabel="time [ps]",
+                    showlegend=True if x0 == 0 else False, legendloc=(0.05,0.3), legendFontSize=8, 
+                    xlim=[0,mt_list[0][-1]], ylim=[0, 0.05],
+                    labels=amp_list, colorMap=plt.cm.hot, colorMap_endpoint=0.6, alpha=0.5)
+
+        axes[2,x0].text(0.02, 0.98, label_list[2][x0], transform=axes[2,x0].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="k")
+        axes[2,x0].text(0.68, 0.95, r"$k_{\parallel} \ =$"+rf"$ \ 300 \ $"+r"$\rm{cm}^{-1}$", transform=axes[2,x0].transAxes, fontsize=12, fontweight='bold', va='top', ha='right', color="k")
+        axes[2,x0].text(0.32, 0.85, r"$W_{\rm ph}=$"+rf"$ \ 0.55 \ $", transform=axes[2,x0].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="k")
+        axes[2,x0].axvline(x=1, linestyle='-.', alpha=0.3, color="c")
+        axes[2,x0].text(0.1, 0.9, "pulse \n on", transform=axes[2,x0].transAxes, fontsize=12, fontweight='bold', va='top', ha='center', alpha=0.3, color="c")
+        axes[2,x0].text(0.22, 0.18, r"$\propto t^2$", transform=axes[2,x0].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="g")
+        axes[2,x0].text(0.85, 0.65, r"$\propto t$", transform=axes[2,x0].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="b")
+        axes[2,x0].set_yticks([0, 0.025, 0.05])
+        axes[2,x0].set_yticklabels([r"$0$", r"$0.4$", r"$0.8$"])
+    
+    axes[2,0].get_legend().set_title(r"$E_0$ [a.u.]")
+    plt.rcParams["axes.axisbelow"] = False
+    plt.tight_layout()
+    clp.adjust(savefile=f"./figures/figS5_convergence.png")
+
+def plot_harmonic():
+    axes = clp.initialize(4, 2, width=4.3*2, height=4.3*0.618*1.1*4, LaTeX=True, fontsize=12)
+    molecule_color = "#ffb000"
+    photon_color = "#00d5ff"
+    annotation_color = "w"
+    inset_color = "w"
+    label_list = {0 : ["(a)","(c)","(e)","(g)"], 1 : ["(b)","(d)","(f)","(h)"]}
+    amp_list = [r"$E_0=1\times 10^{-3}$ a.u.", r"$E_0=7\times 10^{-3}$ a.u."]
+    amp = [0.001, 0.007]
+    N = 144
+    domega = 5
+    common_xlim = [5, 720]
+    common_ylim = [400, 1100]
+    xticks = [5, 240, 480, 720]
+    yticks = [400, 600, 800, 1000]
+
+    def crop_spectrum_to_window(spectrum, extent):
+        x_axis = np.linspace(extent[0], extent[1], spectrum.shape[1])
+        y_axis = np.linspace(extent[3], extent[2], spectrum.shape[0])
+        x_keep = (x_axis >= common_xlim[0]) & (x_axis <= common_xlim[1])
+        y_keep = (y_axis >= common_ylim[0]) & (y_axis <= common_ylim[1])
+        cropped = spectrum[np.ix_(y_keep, x_keep)]
+        cropped_extent = [x_axis[x_keep][0], x_axis[x_keep][-1], y_axis[y_keep][-1], y_axis[y_keep][0]]
+        return cropped, cropped_extent
+
+    for x0 in range(2):
+        sim_ax = axes[0,x0]
+        energy_ax = axes[1,x0]
+        qc_file = np.load(f"./data/mxl_144_harmonic/qc_spectra_96_{amp[x0]}.npy", allow_pickle=True).item()
+        x = qc_file["freq"]
+        sp = qc_file["sp"]
+        dx = x[1] - x[0]
+        nstart, nmid, nend = int(400 / dx), int(650 / dx), int(1100 / dx)
+        x = x[nstart:nend]
+        sp = np.abs(sp[nstart:nend,:]) / 1e34
+        sp = sp[::-1, :]
+        freq_cav_inplane_min = domega
+        freq_cav_inplane_max = domega * N
+        extent = [freq_cav_inplane_min, freq_cav_inplane_max, x[0] , x[-1]]
+        sp, extent = crop_spectrum_to_window(sp, extent)
+
+        vmax = np.max(np.max(sp))
+        vmin = vmax * 0.0001
+        pos = sim_ax.imshow(sp, aspect='auto', extent=extent,
+                cmap=cm.inferno,
+                interpolation='nearest',
+                norm=LogNorm(vmin=vmin, vmax=vmax)
+                )
+        cbar_ax = sim_ax.inset_axes([1.04, 0.0, 0.055, 1.0])
+        cbar = sim_ax.figure.colorbar(pos, cax=cbar_ax)
+        cbar.ax.tick_params(labelsize=12)
+        cbar.set_label("spectral intensity [arb. units]", fontsize=12)
+
+        freq_cav_inplane = np.linspace(common_xlim[0], common_xlim[1], 400)
+
+        xs = [freq_cav_inplane]*2
+        ys = [np.ones(len(freq_cav_inplane)) * 655, (655**2 + freq_cav_inplane**2)**0.5]
+        clp.plotone(xs, ys, sim_ax, showlegend=False, colors=[molecule_color, photon_color], linestyles=["--", "--"], lw=1.2, xlim=common_xlim,
+                xlabel=r"$\omega_{\parallel}$ $[$cm$^{-1}]$",
+                ylabel="IR frequency [cm$^{-1}$]" if x0==0 else None)
+        sim_ax.text(450, 750, "cavity photon", color=photon_color, fontsize=12)
+        sim_ax.text(400, 670, "O=C=O bending", color=molecule_color, fontsize=12)
+        sim_ax.tick_params(color=annotation_color, labelsize='medium', width=2)
+        sim_ax.set_xlim(common_xlim)
+        sim_ax.set_ylim(common_ylim)
+        sim_ax.set_xticks(xticks)
+        sim_ax.set_yticks(yticks)
+        sim_ax.text(0.99, 0.12, amp_list[x0], transform=sim_ax.transAxes, fontsize=12, fontweight='bold', va='top', ha='right', color="w")
+        sim_ax.text(0.09, 0.97, label_list[x0][0], transform=sim_ax.transAxes, fontsize=12, fontweight='bold', va='top', ha='right', color="w")
+        sim_ax.annotate('', xy=(480, 950), xytext=(480, 1050), arrowprops=dict(facecolor=annotation_color, edgecolor=annotation_color, arrowstyle='->', alpha=0.8, lw=2), fontsize=20)
+        sim_ax.text(0.55, 0.9, "UP excitation", transform=sim_ax.transAxes, fontsize=12, fontweight='bold', va='top', ha='right', color=annotation_color)
+
+        phe = np.load(f"./data/mxl_144_harmonic/photonic_energy_96_{amp[x0]}.npy")[:3001, :]
+        t = np.arange(phe.shape[0]) * 2 / 1000
+        phes = [smooth(np.sum(phe[:,:24], axis=1)), smooth(np.sum(phe[:,24:48], axis=1)), smooth(np.sum(phe[:,48:72], axis=1)), smooth(np.sum(phe[:,72:96], axis=1)), smooth(phe[:,96])]
+        labels = [r"$0$-$115$", r"$120$-$235$", r"$240$-$355$", r"$360$-$475$", r"$480$"]
+        clp.plotone([t]*5, phes, energy_ax, 
+                    showlegend=True if x0==1 else False, legendloc=(0.5,0.4), legendFontSize=9, labels=labels,
+                    colorMap=plt.cm.hot, colorMap_endpoint=0.6, lw=1.2, xlim=[0,6],
+                    xlabel="time [ps]",
+                    ylabel="photon energy [a.u.]" if x0==0 else None)
+        if x0 == 1:
+            legend = energy_ax.get_legend()
+            legend.set_title(r"$k_{\parallel}$ [cm$^{-1}$]")
+        energy_ax.text(0.09, 0.97, label_list[x0][1], transform=energy_ax.transAxes, fontsize=12, fontweight='bold', va='top', ha='right', color="k")
+    axes[1,0].set_yticks([0, 0.25, 0.5])
+    axes[1,1].set_yticks([0, 5, 10, 15])
+
+    amp = [0.001, 0.007]
+    amp_list = [r"$E_0=1\times10^{-3}$ a.u.", r"$E_0=7\times10^{-3}$ a.u."]
+    for y0 in range(2):
+        sp_avg = np.load(f"./data/mxl_144_harmonic/effective_efield_96_{amp[y0]}.npy")
+        vmax = np.max(np.max(sp_avg))
+        vmin = vmax * 0.08
+        ntimes = sp_avg.shape[0]
+        sp_avg = np.abs(sp_avg).T
+        extent = [0 , 20, 0, 144]
+        pos = axes[2,y0].imshow(sp_avg, aspect='auto', extent=extent, origin="lower",
+                cmap=cm.hot, interpolation='nearest',
+                norm=LogNorm(vmin=vmin, vmax=vmax))
+        clp.plotone([], [], axes[2,y0], colors=["c--"], ylabel=r"$L_x$ position \ [$\mu\rm{m}$]" if y0==0 else None, xlabel="time [ps]", showlegend=False, lw=1.5)
+        axes[2,y0].set_yticks([0,72, 144])
+        axes[2,y0].set_yticklabels([r"$0$", r"$200$", r"$400$"])
+        axes[2,y0].text(0.02, 0.98, label_list[y0][2], transform=axes[2,y0].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="w")
+        cbar_ax = axes[2,y0].inset_axes([1.04, 0.0, 0.055, 1.0])
+        cbar = axes[2,y0].figure.colorbar(pos, cax=cbar_ax)
+        cbar.ax.tick_params(labelsize=12)
+        cbar.set_label("E-field intensity [a.u.]", fontsize=12)
+
+    amp = [0.001, 0.007]
+    amp_list = [r"$E_0=1\times10^{-3}$ a.u.", r"$E_0=7\times10^{-3}$ a.u."]
+    for y0 in range(2):
+        sp_avg = np.load(f"./data/mxl_144_harmonic/coenergy_{amp[y0]}_neq.npy") * (219474.63 / 36) * 10**(-(y0+2))
+        vmin = np.percentile(sp_avg, 60)
+        vmax = np.percentile(sp_avg, 99)
+        ntimes = sp_avg.shape[0]
+        sp_avg = np.abs(sp_avg).T
+        extent = [0 , 20, 0, 144]
+        pos = axes[3,y0].imshow(sp_avg, aspect='auto', extent=extent, origin="lower",
+                cmap=cm.hot, interpolation='nearest',
+                norm=LogNorm(vmin=vmin, vmax=vmax))
+        clp.plotone([], [], axes[3,y0], colors=["c--"], ylabel=r"$L_x$ position \ [$\mu\rm{m}$]" if y0==0 else None, xlabel="time [ps]", showlegend=False, lw=1.5)
+        axes[3,y0].set_yticks([0,72, 144])
+        axes[3,y0].set_yticklabels([r"$0$", r"$200$", r"$400$"])
+        axes[3,y0].text(0.02, 0.98, label_list[y0][3], transform=axes[3,y0].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="w")
+        cbar_ax = axes[3,y0].inset_axes([1.04, 0.0, 0.055, 1.0])
+        cbar = axes[3,y0].figure.colorbar(pos, cax=cbar_ax)
+        cbar.ax.tick_params(labelsize=12)
+        cbar.set_label(r"$E_{\mathrm{C=O}}$ per molecule [$10^{%d} \ $cm$^{-1}$]"%(y0+2), fontsize=12)
+        if y0 == 0:
+            cbar.set_ticks([2.2, 2.5])
+            cbar.set_ticklabels([r"$2.2$", r"$2.5$"])
+            cbar.ax.minorticks_off()
+        else:
+            cbar.set_ticks([1, 2])
+            cbar.set_ticklabels([r"$1.0$", r"$2.0$"])
+            cbar.ax.minorticks_off()
+    plt.rcParams["axes.axisbelow"] = False
+    plt.tight_layout()
+    clp.adjust(savefile=f"./figures/figS6_harmonic_example.png")
+
 
 if __name__ == "__main__":
     plot_2d_final()
@@ -1113,3 +1327,5 @@ if __name__ == "__main__":
     plot_1d_efield_else()
     plot_1d_efield_ndependence()
     plot_addition_mmsd()
+    plot_convergence()
+    plot_harmonic()
