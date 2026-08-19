@@ -56,9 +56,7 @@ sim = mxl.MultiModeSimulation(
 
 sim.run(steps=int(20000/dt_fs),
         record_history=True,
-        record_to_disk=True,
-        disk_folder_address='./',
-        h5_filename=f"multimode_cavmd_4t4_eq.h5",
+        record_filename=f"multimode_cavmd_4t4_eq.h5",
         record_every_steps=4,
         record_list=['qc'],)
 
