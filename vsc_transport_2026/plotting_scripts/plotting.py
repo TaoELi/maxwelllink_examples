@@ -1277,7 +1277,7 @@ def plot_harmonic():
                 norm=LogNorm(vmin=vmin, vmax=vmax))
         clp.plotone([], [], axes[2,y0], colors=["c--"], ylabel=r"$L_x$ position \ [$\mu\rm{m}$]" if y0==0 else None, xlabel="time [ps]", showlegend=False, lw=1.5)
         axes[2,y0].set_yticks([0,72, 144])
-        axes[2,y0].set_yticklabels([r"$0$", r"$200$", r"$400$"])
+        axes[2,y0].set_yticklabels([r"$0$", r"$500$", r"$1000$"])
         axes[2,y0].text(0.02, 0.98, label_list[y0][2], transform=axes[2,y0].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="w")
         cbar_ax = axes[2,y0].inset_axes([1.04, 0.0, 0.055, 1.0])
         cbar = axes[2,y0].figure.colorbar(pos, cax=cbar_ax)
@@ -1298,7 +1298,7 @@ def plot_harmonic():
                 norm=LogNorm(vmin=vmin, vmax=vmax))
         clp.plotone([], [], axes[3,y0], colors=["c--"], ylabel=r"$L_x$ position \ [$\mu\rm{m}$]" if y0==0 else None, xlabel="time [ps]", showlegend=False, lw=1.5)
         axes[3,y0].set_yticks([0,72, 144])
-        axes[3,y0].set_yticklabels([r"$0$", r"$200$", r"$400$"])
+        axes[3,y0].set_yticklabels([r"$0$", r"$500$", r"$1000$"])
         axes[3,y0].text(0.02, 0.98, label_list[y0][3], transform=axes[3,y0].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="w")
         cbar_ax = axes[3,y0].inset_axes([1.04, 0.0, 0.055, 1.0])
         cbar = axes[3,y0].figure.colorbar(pos, cax=cbar_ax)
@@ -1316,6 +1316,161 @@ def plot_harmonic():
     plt.tight_layout()
     clp.adjust(savefile=f"./figures/figS6_harmonic_example.png")
 
+def plot_diluted():
+    axes = clp.initialize(1, 3, width=4.3*3, height=4.3*0.618*1.1, LaTeX=True, fontsize=12)
+    molecule_color = "#ffb000"
+    photon_color = "#00d5ff"
+    annotation_color = "w"
+    inset_color = "w"
+    label_list = ["(a)","(b)","(c)"]
+    amp_list = [r"$E_0=7\times 10^{-3}$ a.u."]
+    amp = [0.001, 0.007]
+    N = 144
+    domega = 12.5
+    common_xlim = [12.5, 1800]
+    common_ylim = [2200, 2980]
+    xticks = [12.5, 600, 1200, 1800]
+    yticks = [2200, 2400, 2600, 2800]
+
+    def crop_spectrum_to_window(spectrum, extent):
+        x_axis = np.linspace(extent[0], extent[1], spectrum.shape[1])
+        y_axis = np.linspace(extent[3], extent[2], spectrum.shape[0])
+        x_keep = (x_axis >= common_xlim[0]) & (x_axis <= common_xlim[1])
+        y_keep = (y_axis >= common_ylim[0]) & (y_axis <= common_ylim[1])
+        cropped = spectrum[np.ix_(y_keep, x_keep)]
+        cropped_extent = [x_axis[x_keep][0], x_axis[x_keep][-1], y_axis[y_keep][-1], y_axis[y_keep][0]]
+        return cropped, cropped_extent
+
+    sim_ax = axes[0]
+    energy_ax = axes[1]
+    qc_file = np.load(f"./data/mxl_144_diluted/qc_spectra_36_5000.npy", allow_pickle=True).item()
+    x = qc_file["freq"]
+    sp = qc_file["sp"]
+    dx = x[1] - x[0]
+    nstart, nmid, nend = int(2200 / dx), int(2350 / dx), int(3000 / dx)
+    x = x[nstart:nend]
+    sp = np.abs(sp[nstart:nend,:]) / 1e34
+    sp = sp[::-1, :]
+    freq_cav_inplane_min = domega
+    freq_cav_inplane_max = domega * N
+    extent = [freq_cav_inplane_min, freq_cav_inplane_max, x[0] , x[-1]]
+    sp, extent = crop_spectrum_to_window(sp, extent)
+
+    vmax = np.max(np.max(sp))
+    vmin = vmax * 0.0001
+    pos = sim_ax.imshow(sp, aspect='auto', extent=extent,
+            cmap=cm.inferno,
+            interpolation='nearest',
+            norm=LogNorm(vmin=vmin, vmax=vmax)
+            )
+    cbar_ax = sim_ax.inset_axes([1.04, 0.0, 0.055, 1.0])
+    cbar = sim_ax.figure.colorbar(pos, cax=cbar_ax)
+    cbar.ax.tick_params(labelsize=12)
+    cbar.set_label("spectral intensity [arb. units]", fontsize=12)
+
+    freq_cav_inplane = np.linspace(common_xlim[0], common_xlim[1], 400)
+
+    xs = [freq_cav_inplane]*2
+    ys = [np.ones(len(freq_cav_inplane)) * 655, (655**2 + freq_cav_inplane**2)**0.5]
+    clp.plotone(xs, ys, sim_ax, showlegend=False, colors=[molecule_color, photon_color], linestyles=["--", "--"], lw=1.2, xlim=common_xlim,
+            xlabel=r"$\omega_{\parallel}$ $[$cm$^{-1}]$",
+            ylabel="IR frequency [cm$^{-1}$]")
+    sim_ax.text(1100, 2500, "cavity photon", color=photon_color, fontsize=12)
+    sim_ax.text(850, 2370, "C=O asym. stretch", color=molecule_color, fontsize=12)
+    sim_ax.tick_params(color=annotation_color, labelsize='medium', width=2)
+    sim_ax.set_xlim(common_xlim)
+    sim_ax.set_ylim(common_ylim)
+    sim_ax.set_xticks(xticks)
+    sim_ax.set_yticks(yticks)
+    sim_ax.text(0.99, 0.12, amp_list[0], transform=sim_ax.transAxes, fontsize=12, fontweight='bold', va='top', ha='right', color="w")
+    sim_ax.text(0.09, 0.97, label_list[0], transform=sim_ax.transAxes, fontsize=12, fontweight='bold', va='top', ha='right', color="w")
+    sim_ax.annotate('', xy=(450, 2450), xytext=(450, 2550), arrowprops=dict(facecolor=annotation_color, edgecolor=annotation_color, arrowstyle='->', alpha=0.8, lw=2), fontsize=20)
+    sim_ax.text(0.45, 0.52, "UP excitation", transform=sim_ax.transAxes, fontsize=12, fontweight='bold', va='top', ha='right', color=annotation_color)
+
+    phe = np.load(f"./data/mxl_144_diluted/photonic_energy_36_5000.npy")[:3001, :]
+    t = np.arange(phe.shape[0]) * 2 / 1000
+    phes = [smooth(np.sum(phe[:,:5], axis=1)), smooth(np.sum(phe[:,5:10], axis=1)), smooth(np.sum(phe[:,25:30], axis=1)), smooth(np.sum(phe[:,30:35], axis=1)), smooth(phe[:,35])]
+    labels = [r"$0$-$62.5$", r"$62.5$-$125$", r"$312.5$-$375$", r"$375$-$450$", r"$450$"]
+    clp.plotone([t]*5, phes, energy_ax, 
+                showlegend=True, legendloc=(0.5,0.4), legendFontSize=9, labels=labels,
+                colorMap=plt.cm.hot, colorMap_endpoint=0.6, lw=1.2, xlim=[0,6],
+                xlabel="time [ps]",
+                ylabel="photon energy [a.u.]")
+    legend = energy_ax.get_legend()
+    legend.set_title(r"$k_{\parallel}$ [cm$^{-1}$]")
+    energy_ax.text(0.09, 0.97, label_list[1], transform=energy_ax.transAxes, fontsize=12, fontweight='bold', va='top', ha='right', color="k")
+    energy_ax.set_yticks([0, 5, 10, 15])
+
+    sp_avg = np.load(f"./data/mxl_144_diluted/effective_efield_5000.npy")
+    vmax = np.max(np.max(sp_avg))
+    vmin = vmax * 0.01
+    ntimes = sp_avg.shape[0]
+    sp_avg = np.abs(sp_avg).T
+    extent = [0 , 20, 0, 144]
+    pos = axes[2].imshow(sp_avg, aspect='auto', extent=extent, origin="lower",
+            cmap=cm.hot, interpolation='nearest',
+            norm=LogNorm(vmin=vmin, vmax=vmax))
+    clp.plotone([], [], axes[2], colors=["c--"], ylabel=r"$L_x$ position \ [$\mu\rm{m}$]", xlabel="time [ps]", showlegend=False, lw=1.5)
+    axes[2].set_yticks([0,72, 144])
+    axes[2].set_yticklabels([r"$0$", r"$500$", r"$1000$"])
+    axes[2].text(0.02, 0.98, label_list[2], transform=axes[2].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="w")
+    cbar_ax = axes[2].inset_axes([1.04, 0.0, 0.055, 1.0])
+    cbar = axes[2].figure.colorbar(pos, cax=cbar_ax)
+    cbar.ax.tick_params(labelsize=12)
+    cbar.set_label("E-field intensity [a.u.]", fontsize=12)
+
+    plt.rcParams["axes.axisbelow"] = False
+    plt.tight_layout()
+    clp.adjust(savefile=f"./figures/figS7_diluted.png")
+
+def plot_cavity_loss_scan():
+
+    axes = clp.initialize(2, 3, width=3*4.3, height=4.3*0.618*1.1*2, LaTeX=True, fontsize=12)
+    uplist = [36]
+    k_parallel_list = [450]
+    coeff = np.array([0.11638023])
+    wc_up = np.array([0.61])
+    length_list = [2600]
+    vg = np.array([r"$%.3f\,c$"%(coeff[i]) for i in range(1)])
+    label_list = {0 : ["(a)","(b)", "(c)"], 1: ["(d)","(e)","(f)"]}
+    amp_list = [r"$E_0=7\times10^{-3}$ a.u."]
+    tau_dict = {0 : [5000, 2000, 1000], 1 : [800, 500, 100]}
+    qc_dict = {0 : [0.066, 0.105, 0.151], 1 : [0.171, 0.210, 0.480]}
+    ref = np.load(f"./data/mxl_144_cavity_loss_test/effective_efield_5000.npy")
+    vmax = np.max(np.max(ref))
+    vmin = vmax * 0.005
+    for y0 in range(2):
+        for x0 in range(3):
+            sp_avg = np.load(f"./data/mxl_144_cavity_loss_test/effective_efield_{tau_dict[y0][x0]}.npy")
+            ntimes = sp_avg.shape[0]
+            sp_avg = np.abs(sp_avg).T
+            extent = [0 , 20, 0, 144]
+            pos = axes[y0, x0].imshow(sp_avg, aspect='auto', extent=extent, origin="lower",
+                    cmap=cm.hot, interpolation='nearest',
+                    norm=LogNorm(vmin=vmin, vmax=vmax))
+            t = np.linspace(0,(ntimes-1)*2,ntimes)[:length_list[0]]/1000
+            xs = [t]
+            ys = [144*0.2+144*0.75*coeff[0]*t]
+            clp.plotone(xs, ys, axes[y0, x0], colors=["c--"], ylabel=r"$L_x$ position \ [$\mu\rm{m}$]" if x0==0 else None, xlabel="time [ps]" if y0==1 else None, showlegend=False, lw=1.5)
+            axes[y0, x0].set_yticks([0,72, 144])
+            axes[y0, x0].set_yticklabels([r"$0$", r"$200$", r"$400$"])
+            axes[y0, x0].text(0.55, 0.95, r"$k_{\parallel} \ =$"+rf"$ \ {k_parallel_list[0]} \ $"+r"$\rm{cm}^{-1}$", transform=axes[y0, x0].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="w")
+            axes[y0, x0].text(0.55, 0.85, r"$W_{\rm ph}=$"+rf"$ \ {wc_up[0]} \ $", transform=axes[y0, x0].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="w")
+            axes[y0, x0].text(0.55, 0.75, r"$\tau=$"+rf"$ \ {tau_dict[y0][x0]} \ $" + r"$\rm{fs}$", transform=axes[y0, x0].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="w")
+            axes[y0, x0].text(0.55, 0.65, r"$Q_{\rm c}=$"+rf"$ \ {qc_dict[y0][x0]} \ $" + r"$\rm{a.u.}$", transform=axes[y0, x0].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="w")
+            axes[y0, x0].text(0.98, 0.1, amp_list[0], transform=axes[y0, x0].transAxes, fontsize=12, fontweight='bold', va='top', ha='right', color="w")
+            axes[y0, x0].text(0.08, 0.98, label_list[y0][x0], transform=axes[y0, x0].transAxes, fontsize=12, fontweight='bold', va='top', ha='right', color="w")
+            axes[y0, x0].text(0.02, 0.1, r"$\tilde{v}_g \ = \ $"+f"{vg[0]}", transform=axes[y0, x0].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="c")
+            if x0 == 2 : 
+                cbar_ax = axes[y0, x0].inset_axes([1.04, 0.0, 0.055, 1.0])
+                cbar = axes[y0, x0].figure.colorbar(pos, cax=cbar_ax)
+                cbar.ax.tick_params(labelsize=12)
+                cbar.set_label("E-field intensity [a.u.]", fontsize=12)
+    plt.rcParams["axes.axisbelow"] = False
+    plt.tight_layout()
+    clp.adjust(savefile=f"./figures/figS8_cavity_loss_scan.png")
+
+
 
 if __name__ == "__main__":
     plot_2d_final()
@@ -1329,3 +1484,5 @@ if __name__ == "__main__":
     plot_addition_mmsd()
     plot_convergence()
     plot_harmonic()
+    plot_diluted()
+    plot_cavity_loss_scan()
