@@ -95,8 +95,6 @@ sim = mxl.MultiModeSimulation(
 
 sim.run(steps=int(8001/dt_fs),
         record_history=True,
-        record_to_disk=True,
-        disk_folder_address='./',
-        h5_filename=f"2d_{N_grid_x}_{N_grid_y}_efield_neq.h5",
+        record_filename=f"2d_{N_grid_x}_{N_grid_y}_efield_neq.h5",
         record_every_steps=40,
         record_list=['effective_efield'],)
