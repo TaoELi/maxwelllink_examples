@@ -546,8 +546,7 @@ def plot_mmsd():
         lower = np.maximum(msd_array - variance_array, 0.0)
         upper = msd_array + variance_array
         axes[y0,1].fill_between(k_parallel, lower, upper, color="0.75", alpha=0.5, linewidth=0)
-        vg_dot_tf = (0.2 + vg_up * 0.75 * 2) * 144
-        clp.plotone([k_parallel]*2, [msd_array, vg_dot_tf], axes[y0,1], colors=["ro-", "c--"], showlegend=True, legendloc=(0.02,0.7), legendFontSize=8, labels=["MPL", r"$\tilde{v}_{\rm g} \cdot t_{\rm f}$"],
+        clp.plotone([k_parallel], [msd_array], axes[y0,1], colors=["ro-", "c--"], showlegend=False,
                     xlim=[425, 850],
                     ylabel=r"most probable location [$\mu$m]", xlabel=r"$k_{\parallel}$ [$\rm{cm}^{-1}$]" if y0==1 else None)
         axes[y0,1].text(0.08, 0.97, label_list[y0][1], transform=axes[y0,1].transAxes, fontsize=12, fontweight='bold', va='top', ha='right', color="k")
