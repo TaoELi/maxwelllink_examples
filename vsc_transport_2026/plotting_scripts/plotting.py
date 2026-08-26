@@ -322,7 +322,7 @@ def plot_1d_efield():
         axes[2,j].text(0.32, 0.85, r"$W_{\rm ph}=$"+rf"$ \ {wc_up[j]} \ $", transform=axes[2,j].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="k")
         axes[2,j].axvline(x=1, linestyle='-.', alpha=0.3, color="c")
         axes[2,j].text(0.1, 0.9, "pulse \n on", transform=axes[2,j].transAxes, fontsize=12, fontweight='bold', va='top', ha='center', alpha=0.3, color="c")
-        axes[2,j].text(0.22, 0.18, r"$\propto t^2$", transform=axes[2,j].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="g")
+        axes[2,j].text(0.22, 0.25, r"$\propto t^2$", transform=axes[2,j].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="g")
         axes[2,j].text(0.85, 0.65, r"$\propto t$", transform=axes[2,j].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="b")
     
     axes[2,1].set_yticks([0, 0.025, 0.05])
