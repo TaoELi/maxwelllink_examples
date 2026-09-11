@@ -1136,7 +1136,8 @@ def plot_convergence():
             axes[y0, x0].text(0.98, 0.1, amp_list[y0], transform=axes[y0, x0].transAxes, fontsize=12, fontweight='bold', va='top', ha='right', color="w")
             axes[y0, x0].text(0.02, 0.98, label_list[y0][x0], transform=axes[y0, x0].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="w")
             axes[y0, x0].text(0.02, 0.1, r"$\tilde{v}_g \ = \ $"+r"$0.071 \ c$", transform=axes[y0, x0].transAxes, fontsize=12, fontweight='bold', va='top', ha='left', color="c")
-            axes[y0, x0].text(0.98, 0.2, f"averaged over {repeat_list[x0]} times", transform=axes[y0, x0].transAxes, fontsize=12, fontweight='bold', va='top', ha='right', color="w")
+            average_text = f"averaged over {repeat_list[x0]} trajectory" if x0==0 else f"averaged over {repeat_list[x0]} trajectories"
+            axes[y0, x0].text(0.98, 0.2, average_text, transform=axes[y0, x0].transAxes, fontsize=12, fontweight='bold', va='top', ha='right', color="w")
             cbar_ax = axes[y0, x0].inset_axes([1.04, 0.0, 0.055, 1.0])
             cbar = axes[y0, x0].figure.colorbar(pos, cax=cbar_ax)
             cbar.ax.tick_params(labelsize=12)
