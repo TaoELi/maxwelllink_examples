@@ -1,0 +1,81 @@
+Geometry = GenFormat {
+6 C
+  C H
+    1  1     -0.00000000     -0.00000000      0.66291859
+    2  1      0.00000000     -0.00000000     -0.66291859      
+    3  2      0.00000000      0.92350952      1.23218316      
+    4  2     -0.00000000      0.92350952     -1.23218316      
+    5  2     -0.00000000     -0.92350952     -1.23218316      
+    6  2     -0.00000000     -0.92350952      1.23218316      
+}
+
+Driver = {}
+
+Hamiltonian = DFTB {
+  SCC = Yes
+  SCCTolerance = 1.0E-8
+  #ThirdOrderFull = Yes
+  MaxSCCIterations = 1000
+
+  Mixer = Simple {
+    MixingParameter = 5.0E-2
+  }
+
+  MaxAngularMomentum = {
+    C = "p"
+    H = "s"
+  }
+
+  Charge = 0.0
+
+  SpinPolarisation = Colinear {
+    UnpairedElectrons = 0.0
+  }
+
+  #HubbardDerivs {
+  #  H = -0.1857
+  #  C = -0.1492
+  #}
+
+  SpinConstants = {
+        C = {-0.02265}  #Wpp
+        H = {-0.07174}  #Wss
+    }
+  
+  Filling = Fermi {
+    Temperature [Kelvin] = 10.0
+  }
+
+  SlaterKosterFiles = {
+    C-C = "/work/taoeli/users/gmeng/electronic-decay/dftbplus-parameter/3ob-3-1/C-C.skf"
+    C-H = "/work/taoeli/users/gmeng/electronic-decay/dftbplus-parameter/3ob-3-1/C-H.skf"
+    H-C = "/work/taoeli/users/gmeng/electronic-decay/dftbplus-parameter/3ob-3-1/H-C.skf"
+    H-H = "/work/taoeli/users/gmeng/electronic-decay/dftbplus-parameter/3ob-3-1/H-H.skf"
+  }
+
+  ReadInitialCharges = No
+}
+
+Options = {
+  WriteAutotestTag = Yes
+}
+
+InputVersion = 20.1
+
+ElectronDynamics = {
+  Steps = __STEPS__
+  TimeStep [au] = __DT_AU__
+  WriteFrequency = 100
+  WriteEnergyAndCharges = Yes
+  MaxwellLinkSocket = {
+    File = "__MXL_SOCKET__"
+    ResetDipole = Yes
+  }
+}
+
+Parallel {
+  UseOmpThreads = Yes
+  Blacs = BlockSize {
+    1
+  }
+}
