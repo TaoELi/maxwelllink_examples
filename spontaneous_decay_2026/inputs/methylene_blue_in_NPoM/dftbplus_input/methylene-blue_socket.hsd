@@ -1,0 +1,74 @@
+Geometry = GenFormat {
+    <<< "geo_snapshot.gen"
+}
+
+Hamiltonian = DFTB {
+  SCC = Yes
+  SCCTolerance = 1.0E-8
+  ThirdOrderFull = Yes
+  MaxSCCIterations = 1000
+  
+  Mixer = Simple {
+    MixingParameter = 5.0E-2
+  }
+  
+  Charge = 1.0
+
+  MaxAngularMomentum {
+    S = "d"
+    N = "p"
+    C = "p"
+    H = "s"
+  }
+
+  HubbardDerivs {
+    S = -0.1100
+    N = -0.1535
+    C = -0.1492
+    H = -0.1857
+  }
+
+  HCorrection = Damping {
+    Exponent = 4.0
+  }
+
+  SlaterKosterFiles {
+    S-S = "/work/taoeli/users/gmeng/electronic-decay/dftbplus-parameter/3ob-3-1/S-S.skf"
+    S-N = "/work/taoeli/users/gmeng/electronic-decay/dftbplus-parameter/3ob-3-1/S-N.skf"
+    S-C = "/work/taoeli/users/gmeng/electronic-decay/dftbplus-parameter/3ob-3-1/S-C.skf"
+    S-H = "/work/taoeli/users/gmeng/electronic-decay/dftbplus-parameter/3ob-3-1/S-H.skf"
+    N-S = "/work/taoeli/users/gmeng/electronic-decay/dftbplus-parameter/3ob-3-1/N-S.skf"
+    N-N = "/work/taoeli/users/gmeng/electronic-decay/dftbplus-parameter/3ob-3-1/N-N.skf"
+    N-C = "/work/taoeli/users/gmeng/electronic-decay/dftbplus-parameter/3ob-3-1/N-C.skf"
+    N-H = "/work/taoeli/users/gmeng/electronic-decay/dftbplus-parameter/3ob-3-1/N-H.skf"
+    C-S = "/work/taoeli/users/gmeng/electronic-decay/dftbplus-parameter/3ob-3-1/C-S.skf"
+    C-N = "/work/taoeli/users/gmeng/electronic-decay/dftbplus-parameter/3ob-3-1/C-N.skf"
+    C-C = "/work/taoeli/users/gmeng/electronic-decay/dftbplus-parameter/3ob-3-1/C-C.skf"
+    C-H = "/work/taoeli/users/gmeng/electronic-decay/dftbplus-parameter/3ob-3-1/C-H.skf"
+    H-S = "/work/taoeli/users/gmeng/electronic-decay/dftbplus-parameter/3ob-3-1/H-S.skf"
+    H-N = "/work/taoeli/users/gmeng/electronic-decay/dftbplus-parameter/3ob-3-1/H-N.skf"
+    H-C = "/work/taoeli/users/gmeng/electronic-decay/dftbplus-parameter/3ob-3-1/H-C.skf"
+    H-H = "/work/taoeli/users/gmeng/electronic-decay/dftbplus-parameter/3ob-3-1/H-H.skf"
+  }
+  
+  Filling = Fermi {
+    Temperature [Kelvin] = 10.0   
+  }
+  
+  ReadInitialCharges = No
+}
+
+ParserOptions {
+  ParserVersion = 15
+}
+
+ElectronDynamics = {
+  Steps = __STEPS__
+  TimeStep [au] = __DT_AU__
+  WriteFrequency = 100
+  WriteEnergyAndCharges = Yes
+  MaxwellLinkSocket = {
+    File = "__MXL_SOCKET__"
+    ResetDipole = Yes
+  }
+}

@@ -1,0 +1,79 @@
+Geometry = GenFormat {
+ 24  C
+ C H
+    1  1   -0.1225894455E+01    0.3855322381E-04   -0.7205127026E+00
+    2  1   -0.1225878620E+01    0.3433015007E-04    0.7204856110E+00
+    3  1    0.1225861010E+01    0.4579992004E-04   -0.7205313898E+00
+    4  1    0.1225865435E+01    0.6192413869E-04    0.7204686260E+00
+    5  1   -0.2172483834E-04    0.4637897667E-04   -0.1408041001E+01
+    6  1   -0.2277990907E-05    0.8226234571E-04    0.1407992821E+01
+    7  1   -0.2481567092E+01   -0.2656134948E-04   -0.1407232733E+01
+    8  1   -0.2481509632E+01   -0.5626286569E-04    0.1407270868E+01
+    9  1    0.2481524776E+01   -0.4904873648E-04   -0.1407276445E+01
+   10  1    0.2481514957E+01   -0.1225174885E-04    0.1407230838E+01
+   11  1   -0.3664951491E+01   -0.1184853586E-03   -0.7112814322E+00
+   12  1   -0.3664927434E+01   -0.1544596149E-03    0.7113808749E+00
+   13  1    0.3664924677E+01   -0.1895315594E-03   -0.7113464780E+00
+   14  1    0.3664922358E+01   -0.1736475826E-03    0.7113182686E+00
+   15  2   -0.2061866939E-04   -0.1282109086E-04   -0.2498138528E+01
+   16  2    0.4007563876E-05    0.6109860702E-04    0.2498088815E+01
+   17  2   -0.2483629521E+01   -0.1185274834E-04   -0.2496451475E+01
+   18  2   -0.2483481873E+01   -0.8422441291E-04    0.2496488916E+01
+   19  2    0.2483558409E+01   -0.4238639840E-04   -0.2496498548E+01
+   20  2    0.2483523381E+01    0.1577768049E-04    0.2496452247E+01
+   21  2   -0.4613993531E+01   -0.1790593922E-03   -0.1243860969E+01
+   22  2   -0.4613943927E+01   -0.2558084053E-03    0.1244004699E+01
+   23  2    0.4613965293E+01   -0.3253640012E-03   -0.1243936482E+01
+   24  2    0.4613954935E+01   -0.2943599016E-03    0.1243922874E+01
+}
+
+Hamiltonian = DFTB {
+  SCC = Yes
+  SCCTolerance = 1.0E-8
+  ThirdOrderFull = Yes
+  MaxSCCIterations = 1000
+  
+  Mixer = Simple {
+    MixingParameter = 5.0E-2
+  }
+  
+  Charge = 0.0
+
+  MaxAngularMomentum {
+    C = "p"
+    H = "s"
+  }
+
+  HubbardDerivs {
+    C = -0.1492
+    H = -0.1857
+  }
+
+  SlaterKosterFiles {
+    C-C = "/work/taoeli/users/gmeng/electronic-decay/dftbplus-parameter/3ob-3-1/C-C.skf"
+    C-H = "/work/taoeli/users/gmeng/electronic-decay/dftbplus-parameter/3ob-3-1/C-H.skf"
+    H-C = "/work/taoeli/users/gmeng/electronic-decay/dftbplus-parameter/3ob-3-1/H-C.skf"
+    H-H = "/work/taoeli/users/gmeng/electronic-decay/dftbplus-parameter/3ob-3-1/H-H.skf"
+  }
+  
+  Filling = Fermi {
+    Temperature [Kelvin] = 10.0   
+  }
+  
+  ReadInitialCharges = No
+}
+
+ParserOptions {
+  ParserVersion = 15
+}
+
+ElectronDynamics = {
+  Steps = __STEPS__
+  TimeStep [au] = __DT_AU__
+  WriteFrequency = 100
+  WriteEnergyAndCharges = Yes
+  MaxwellLinkSocket = {
+    File = "__MXL_SOCKET__"
+    ResetDipole = Yes
+  }
+}
