@@ -1,6 +1,6 @@
-# MXL Input Files
+# Input Files
 
-This folder contains input templates and helper scripts for running MXL simulations with LAMMPS and Maxwell-link style cavity coupling.
+This folder contains simulation input scripts and relevant post-processing scripts for all the simulations involved.
 
 ## Contents
 
@@ -13,4 +13,5 @@ This folder contains input templates and helper scripts for running MXL simulati
 - `1d_mxl_diluted/`: Input and submission for one-dimensional nonequilibrium MXL simulations for diluted system.
 - `2d_mxl/`: Input and submission files for two-dimensional MXL simulations.
 
-Each case directory contains job submission scripts, launch scripts, MXL driver files, and LAMMPS input files under `files/`.  Some directories also include analysis helpers such as `coenergy.py`, `analysis.sh`, and `run.sh`.
+Each case directory contains job submission scripts, launch scripts, MXL driver files, and LAMMPS input files under `files/`.  
+Some directories also include analysis helpers such as `coenergy.py`, `analysis.sh`, and `run.sh`.

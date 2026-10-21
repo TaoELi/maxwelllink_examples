@@ -1,8 +1,8 @@
-# 2026 Spring Xinwei Meso MXL
+# 2026 Spring Nonlinear Freezing
 
-This folder collects the simulation inputs, processed data, and plotting scripts for the 2026 spring MXL mesoscale study.
+This folder contains all the simulation inputs, plotting scripts and relavent data for the nonlinear freezing study using MaxwellLink.
 
 ## Contents
 
-- `mxl_input_files/`: Input templates and job scripts for 1D, 2D, equilibrium, and system-size-dependence MXL simulations.
-- `plotting_scripts/`: Scripts, processed data, and generated figures used for visualization and post-processing.
+- `mxl_input_files/`: Input files for 1D and 2D simulations.
+- `plotting_scripts/`: python scripts for all the figures in manuscript and SI.
