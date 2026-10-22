@@ -8,3 +8,5 @@ This Github repo stores input and post-processing files of publications using th
 2. [vsc_transport_2026/](./vsc_transport_2026/): Ji, X.; Li, T. E. **[Nonlinear Freezing of Vibrational Polariton Transport via Mesoscale Simulations.](https://doi.org/10.1021/acs.nanolett.6c03367)** *Nano Lett.* **2026**, *26* (38), 13012-13018.
 
 3. [spontaneous_decay_2026/](./spontaneous_decay_2026/): Meng, G.; Li, T. E. **Molecular Electrodynamic Relaxation in Dielectric and Plasmonic Cavities** *Submitted* **2026**.
+
+**Tip:** Each publication may involve new features in MaxwellLink, and users should follow the **README** in each subfolder for the particular MaxwellLink version. We try our best efforts to ensure that the latest version of MaxwellLink can reproduce historical work exactly, but minor input variable drift may occur in later updates.
